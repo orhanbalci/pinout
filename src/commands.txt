@@ -14,7 +14,7 @@ There are TWO Phases in the drawing process and the commands are divided by phas
 DRAW Operations must occur in Draw Phase and Setup operations must occur in Setup phase.
 
 SETUP Phase Commands (Called before the DRAW Command)
-LABEL, DEFAULT, TYPE, GROUP, <list of labels for pin attributes>
+LABELS, DEFAULT, TYPE, GROUP, <list of labels for pin attributes>
 Defines PIN labels, best as the first command in the file. Aligns with pin data draw commands in draw phase. Helps create named columns which ease editing in a spreadsheet.
 DEFAULT - Defines the Default theme
 TYPE - Pin Type Theme Settings
@@ -80,7 +80,7 @@ Color - The Color of the IO Pin Type indicator
 Opacity - The Opacity of the IO Pin Type indicator
 TYPE, INPUT, Color, Opacity
 Sets the Color and Opacity INPUT pin Indicator
-Color - The Color of the INPUT Pin Type indicator
+Color - The Collabelsor of the INPUT Pin Type indicator
 Opacity - The Opacity of the INPUT Pin Type indicator
 TYPE, OUTPUT, Color, Opacity
 Sets the Color and Opacity OUTPUT pin Indicator

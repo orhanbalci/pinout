@@ -12,7 +12,7 @@ pub enum Phase {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Command {
     // Setup Phase Commands
-    Label {
+    Labels {
         default: String,
         pin_type: Option<String>,
         group: Option<String>,
@@ -23,6 +23,12 @@ pub enum Command {
         pin_type: Option<String>,
         group: Option<String>,
         colors: Vec<String>,
+    },
+    BorderWidth {
+        width: String,
+    },
+    BorderOpacity {
+        opacity: String,
     },
     FillColor {
         default: String,

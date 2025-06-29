@@ -46,7 +46,7 @@ impl Document {
 fn is_setup_command(command: &Command) -> bool {
     matches!(
         command,
-        Command::Label { .. }
+        Command::Labels { .. }
             | Command::BorderColor { .. }
             | Command::FillColor { .. }
             | Command::Opacity { .. }

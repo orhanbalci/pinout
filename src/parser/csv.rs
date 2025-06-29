@@ -62,8 +62,10 @@ fn parse_command(
 ) -> Result<Command, ParserError> {
     match (command_name.as_str(), phase) {
         // Setup Phase Commands
-        ("LABEL", Phase::Setup) => parse_label_command(record),
+        ("LABELS", Phase::Setup) => parse_label_command(record),
         ("BORDER COLOR", Phase::Setup) => parse_border_color_command(record),
+        ("BORDER WIDTH", Phase::Setup) => parse_border_width_command(record),
+        ("BORDER OPACITY", Phase::Setup) => parse_border_opacity_command(record),
         ("FILL COLOR", Phase::Setup) => parse_fill_color_command(record),
         ("OPACITY", Phase::Setup) => parse_opacity_command(record),
         ("FONT", Phase::Setup) => parse_font_command(record),
@@ -94,15 +96,42 @@ fn parse_command(
         ("END MESSAGE", Phase::Draw) => Ok(Command::EndMessage),
 
         // Invalid phase for command
-        _ => Err(ParserError::InvalidPhase),
+        _ => {
+            println!("{}", command_name);
+            Err(ParserError::InvalidPhase)
+        }
     }
+}
+
+fn parse_border_opacity_command(record: &StringRecord) -> Result<Command, ParserError> {
+    if record.len() < 2 {
+        return Err(ParserError::ParseError(
+            "BORDER OPACITY command requires at least a default value".to_string(),
+        ));
+    }
+
+    let opacity = record.get(1).unwrap().to_string();
+
+    Ok(Command::BorderOpacity { opacity })
+}
+
+fn parse_border_width_command(record: &StringRecord) -> Result<Command, ParserError> {
+    if record.len() < 2 {
+        return Err(ParserError::ParseError(
+            "BORDER WIDTH command requires at least a default value".to_string(),
+        ));
+    }
+
+    let width = record.get(1).unwrap().to_string();
+
+    Ok(Command::BorderWidth { width })
 }
 
 // Parse functions for each command type
 fn parse_label_command(record: &StringRecord) -> Result<Command, ParserError> {
     if record.len() < 2 {
         return Err(ParserError::ParseError(
-            "LABEL command requires at least a default value".to_string(),
+            "LABELS command requires at least a default value".to_string(),
         ));
     }
 
@@ -117,7 +146,7 @@ fn parse_label_command(record: &StringRecord) -> Result<Command, ParserError> {
         }
     }
 
-    Ok(Command::Label {
+    Ok(Command::Labels {
         default,
         pin_type,
         group,

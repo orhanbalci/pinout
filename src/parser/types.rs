@@ -60,6 +60,18 @@ pub enum Command {
         group: Option<String>,
         colors: Vec<String>,
     },
+    FontOutline {
+        default: String,
+        pin_type: Option<String>,
+        group: Option<String>,
+        colors: Vec<String>,
+    },
+    FontOutlineThickness {
+        default: f32,
+        pin_type: Option<f32>,
+        group: Option<f32>,
+        thickness: Vec<f32>,
+    },
     FontSlant {
         default: FontSlant,
         pin_type: Option<FontSlant>,
@@ -132,10 +144,10 @@ pub enum Command {
     },
     Image {
         name: String,
-        x: f32,
-        y: f32,
-        w: f32,
-        h: f32,
+        x: Option<f32>,
+        y: Option<f32>,
+        w: Option<f32>,
+        h: Option<f32>,
         cx: Option<f32>,
         cy: Option<f32>,
         cw: Option<f32>,
@@ -144,10 +156,10 @@ pub enum Command {
     },
     Icon {
         name: String,
-        x: f32,
-        y: f32,
-        w: f32,
-        h: f32,
+        x: Option<f32>,
+        y: Option<f32>,
+        w: Option<f32>,
+        h: Option<f32>,
         rot: Option<f32>,
     },
     Anchor {

@@ -25,10 +25,10 @@ pub enum Command {
         colors: Vec<String>,
     },
     BorderWidth {
-        width: String,
+        width: u32,
     },
     BorderOpacity {
-        opacity: String,
+        opacity: f32,
     },
     FillColor {
         default: String,

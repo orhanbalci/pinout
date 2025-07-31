@@ -185,8 +185,8 @@ impl SvgRenderer {
                 group,
                 colors,
             } => self.set_theme_str("Border Color", default, pin_type, group, colors),
-            Command::BorderWidth { width } => self.set_border_width(width),
-            Command::BorderOpacity { opacity } => self.set_border_opacity(opacity),
+            Command::BorderWidth { width } => self.set_border_width(*width),
+            Command::BorderOpacity { opacity } => self.set_border_opacity(*opacity),
             Command::FillColor {
                 default,
                 pin_type,
@@ -539,12 +539,12 @@ impl SvgRenderer {
         }
     }
 
-    fn set_border_width(&mut self, width: &str) -> Result<(), RenderError> {
+    fn set_border_width(&mut self, width: u32) -> Result<(), RenderError> {
         self.set_theme_value("DEFAULT", "Border Width", width.to_string());
         Ok(())
     }
 
-    fn set_border_opacity(&mut self, opacity: &str) -> Result<(), RenderError> {
+    fn set_border_opacity(&mut self, opacity: f32) -> Result<(), RenderError> {
         self.set_theme_value("DEFAULT", "Border Opacity", opacity.to_string());
         Ok(())
     }

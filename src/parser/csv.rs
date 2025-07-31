@@ -172,7 +172,9 @@ fn parse_border_opacity_command(record: &StringRecord) -> Result<Command, Parser
         ));
     }
 
-    let opacity = record.get(1).unwrap().to_string();
+    let opacity = record.get(1).unwrap().parse::<f32>().map_err(|_| {
+        ParserError::ParseError("Failed to parse border opacity as f32".to_string())
+    })?;
 
     Ok(Command::BorderOpacity { opacity })
 }
@@ -184,7 +186,10 @@ fn parse_border_width_command(record: &StringRecord) -> Result<Command, ParserEr
         ));
     }
 
-    let width = record.get(1).unwrap().to_string();
+    let width =
+        record.get(1).unwrap().parse::<u32>().map_err(|_| {
+            ParserError::ParseError("Failed to parse border width as u32".to_string())
+        })?;
 
     Ok(Command::BorderWidth { width })
 }

@@ -179,14 +179,6 @@ impl SvgRenderer {
                 group,
                 labels,
             } => self.set_labels(default, pin_type, group, labels),
-            Command::BorderColor {
-                default,
-                pin_type,
-                group,
-                colors,
-            } => self.set_theme_str("Border Color", default, pin_type, group, colors),
-            Command::BorderWidth { width } => self.set_border_width(*width),
-            Command::BorderOpacity { opacity } => self.set_border_opacity(*opacity),
             Command::FillColor {
                 default,
                 pin_type,
@@ -199,6 +191,14 @@ impl SvgRenderer {
                 group,
                 opacities,
             } => self.set_theme_float("Opacity", *default, *pin_type, *group, opacities),
+            Command::BorderColor {
+                default,
+                pin_type,
+                group,
+                colors,
+            } => self.set_theme_str("Border Color", default, pin_type, group, colors),
+            Command::BorderWidth { width } => self.set_border_width(*width),
+            Command::BorderOpacity { opacity } => self.set_border_opacity(*opacity),
             Command::Font {
                 default,
                 pin_type,
@@ -253,6 +253,9 @@ impl SvgRenderer {
                 *group,
                 thickness,
             ),
+
+            Command::Page { page_name } => self.set_page_size(page_name),
+            Command::Dpi { dpi } => self.set_dpi(*dpi),
             Command::Type {
                 pin_type,
                 color,
@@ -315,8 +318,6 @@ impl SvgRenderer {
                 *bold,
                 *stretch,
             ),
-            Command::Page { page_name } => self.set_page_size(page_name),
-            Command::Dpi { dpi } => self.set_dpi(*dpi),
 
             // Draw phase commands
             Command::Draw => Ok(()), // Already handled in process_commands

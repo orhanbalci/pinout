@@ -488,9 +488,8 @@ impl SvgRenderer {
 
         // Set for each pin function type
         for (i, value) in values.iter().enumerate() {
-            if i < self.pin_func_types.len() - 3 {
-                // Subtract 3 for the fixed entries
-                let pin_func = &self.pin_func_types[i + 3].clone(); // +3 to skip fixed entries
+            if i < self.pin_func_types.len() {
+                let pin_func = &self.pin_func_types[i].clone();
                 self.set_theme_value(pin_func, entry, value.clone());
             }
         }
@@ -521,9 +520,8 @@ impl SvgRenderer {
 
         // Set for each pin function type
         for (i, &value) in values.iter().enumerate() {
-            if i < self.pin_func_types.len() - 3 {
-                // Subtract 3 for the fixed entries
-                let pin_func = &self.pin_func_types[i + 3].clone(); // +3 to skip fixed entries
+            if i < self.pin_func_types.len() {
+                let pin_func = &self.pin_func_types[i].clone();
                 self.set_theme_value(pin_func, entry, value.to_string());
             }
         }
@@ -576,9 +574,8 @@ impl SvgRenderer {
 
         // Set for each pin function type
         for (i, &slant) in slants.iter().enumerate() {
-            if i < self.pin_func_types.len() - 3 {
-                // Subtract 3 for the fixed entries
-                let pin_func = &self.pin_func_types[i + 3].clone(); // +3 to skip fixed entries
+            if i < self.pin_func_types.len() {
+                let pin_func = &self.pin_func_types[i].clone();
                 self.set_theme_value(pin_func, "Font Slant", font_slant_to_string(slant));
             }
         }
@@ -611,9 +608,8 @@ impl SvgRenderer {
 
         // Set for each pin function type
         for (i, &bold) in boldness.iter().enumerate() {
-            if i < self.pin_func_types.len() - 3 {
-                // Subtract 3 for the fixed entries
-                let pin_func = &self.pin_func_types[i + 3].clone(); // +3 to skip fixed entries
+            if i < self.pin_func_types.len() {
+                let pin_func = &self.pin_func_types[i].clone();
                 self.set_theme_value(pin_func, "Font Bold", font_boldness_to_string(bold));
             }
         }
@@ -646,9 +642,8 @@ impl SvgRenderer {
 
         // Set for each pin function type
         for (i, &stretch) in stretches.iter().enumerate() {
-            if i < self.pin_func_types.len() - 3 {
-                // Subtract 3 for the fixed entries
-                let pin_func = &self.pin_func_types[i + 3].clone(); // +3 to skip fixed entries
+            if i < self.pin_func_types.len() {
+                let pin_func = &self.pin_func_types[i].clone();
                 self.set_theme_value(pin_func, "Font Stretch", font_stretch_to_string(stretch));
             }
         }
@@ -1119,9 +1114,8 @@ impl SvgRenderer {
 
         // Process each attribute (columns after the pin type, wire, and group)
         for (index, attr) in attributes.iter().enumerate() {
-            if index < self.pin_func_types.len() - 3 {
-                // -3 for the fixed entries
-                let pin_func = &self.pin_func_types[index + 3]; // +3 to skip fixed entries
+            if index < self.pin_func_types.len() {
+                let pin_func = &self.pin_func_types[index];
 
                 if !attr.is_empty() {
                     // Calculate position for the text box
@@ -1203,7 +1197,7 @@ impl SvgRenderer {
         if let Some(label_text) = label {
             if !label_text.is_empty() {
                 // Use the first pin function type for the label
-                let pin_func = &self.pin_func_types[3]; // First pin function type after fixed entries
+                let pin_func = &self.pin_func_types[0]; // First pin function type
 
                 // Calculate position for the text box
                 let (x, y) = self.get_pin_box_xy(box_offset_x, pin_func, line_height);

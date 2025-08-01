@@ -1,39 +1,39 @@
 // src/main.rs
-use clap::{App, Arg};
-use genpinout::parser::csv::parse_csv_file;
-use genpinout::renderer::svg::generate_svg;
+use clap::{Arg, Command};
+use pinout::parser::csv::parse_csv_file;
+use pinout::renderer::svg::generate_svg;
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let matches = App::new("GenPinout SVG")
+    let matches = Command::new("GenPinout SVG")
         .version("1.0")
         .author("Rust Version")
         .about("Generates pinout diagrams in SVG format from CSV descriptions")
         .arg(
-            Arg::with_name("csv_file")
+            Arg::new("csv_file")
                 .help("Input CSV file with pinout description")
                 .required(true)
                 .index(1),
         )
         .arg(
-            Arg::with_name("svg_file")
+            Arg::new("svg_file")
                 .help("Output SVG file (defaults to csv filename with .svg extension)")
                 .index(2),
         )
         .arg(
-            Arg::with_name("overwrite")
+            Arg::new("overwrite")
                 .help("Overwrite existing SVG file if it exists")
                 .long("overwrite")
-                .short("o")
-                .takes_value(false),
+                .short('o')
+                .action(clap::ArgAction::SetTrue),
         )
         .get_matches();
 
-    let csv_path = matches.value_of("csv_file").unwrap();
+    let csv_path = matches.get_one::<String>("csv_file").unwrap();
 
     // Determine SVG output path
-    let svg_path = match matches.value_of("svg_file") {
-        Some(path) => path.to_string(),
+    let svg_path = match matches.get_one::<String>("svg_file") {
+        Some(path) => path.clone(),
         None => {
             let csv_file = Path::new(csv_path);
             let stem = csv_file.file_stem().unwrap().to_str().unwrap();
@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Check if SVG file exists and if we're allowed to overwrite
-    if Path::new(&svg_path).exists() && !matches.is_present("overwrite") {
+    if Path::new(&svg_path).exists() && !matches.get_flag("overwrite") {
         return Err(format!(
             "SVG file {} exists. Use --overwrite to overwrite.",
             svg_path

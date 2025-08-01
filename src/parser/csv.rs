@@ -172,8 +172,12 @@ fn parse_border_opacity_command(record: &StringRecord) -> Result<Command, Parser
         ));
     }
 
-    let opacity = record.get(1).unwrap().parse::<f32>().map_err(|_| {
-        ParserError::ParseError("Failed to parse border opacity as f32".to_string())
+    let opacity_str = record.get(1).unwrap();
+    let opacity = opacity_str.trim().parse::<f32>().map_err(|_| {
+        ParserError::ParseError(format!(
+            "Failed to parse border opacity '{}' as f32",
+            opacity_str
+        ))
     })?;
 
     Ok(Command::BorderOpacity { opacity })
@@ -186,10 +190,13 @@ fn parse_border_width_command(record: &StringRecord) -> Result<Command, ParserEr
         ));
     }
 
-    let width =
-        record.get(1).unwrap().parse::<u32>().map_err(|_| {
-            ParserError::ParseError("Failed to parse border width as u32".to_string())
-        })?;
+    let width_str = record.get(1).unwrap();
+    let width = width_str.trim().parse::<u32>().map_err(|_| {
+        ParserError::ParseError(format!(
+            "Failed to parse border width '{}' as u32",
+            width_str
+        ))
+    })?;
 
     Ok(Command::BorderWidth { width })
 }
@@ -757,7 +764,7 @@ fn parse_page_command(record: &StringRecord) -> Result<Command, ParserError> {
         ));
     }
 
-    let page_name = record.get(1).unwrap().to_string();
+    let page_name = record.get(1).unwrap().trim().to_string();
 
     Ok(Command::Page { page_name })
 }

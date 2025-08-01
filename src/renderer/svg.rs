@@ -469,7 +469,10 @@ impl SvgRenderer {
 
             // Draw phase commands
             Command::Draw => Ok(()), // Already handled in process_commands
-            Command::GoogleFont { link } => todo!("handle font implementation"),
+            Command::GoogleFont { link } => {
+                // todo!("handle font implementation")
+                Ok(())
+            }
             Command::Image {
                 name,
                 x,
@@ -843,7 +846,7 @@ impl SvgRenderer {
     }
 
     fn set_page_size(&mut self, page_name: &str) -> Result<(), RenderError> {
-        let page_dimensions = match page_name {
+        let page_dimensions = match page_name.trim() {
             "A4-P" => (210.0, 297.0), // mm (portrait)
             "A4-L" => (297.0, 210.0), // mm (landscape)
             "A3-P" => (297.0, 420.0), // mm (portrait)
@@ -1982,6 +1985,16 @@ impl SvgRenderer {
         }
     }
 
+    /// Save the SVG document to a file
+    pub fn save_to_file(&self, path: &str) -> Result<(), RenderError> {
+        use std::fs::File;
+        use std::io::Write;
+
+        let mut file = File::create(path)?;
+        write!(file, "{}", self.document)?;
+        Ok(())
+    }
+
     // Helper methods
 }
 
@@ -1999,4 +2012,12 @@ fn font_slant_to_string(default: FontSlant) -> String {
 
 fn font_stretch_to_string(default: FontStretch) -> String {
     todo!()
+}
+
+/// Generate SVG file from commands
+pub fn generate_svg(commands: &[Command], output_path: &str) -> Result<(), RenderError> {
+    let mut renderer = SvgRenderer::new();
+    renderer.process_commands(commands)?;
+    renderer.save_to_file(output_path)?;
+    Ok(())
 }

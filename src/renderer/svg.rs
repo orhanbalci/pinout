@@ -9,9 +9,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use svg::Document;
-use svg::node::element::{
-    Definitions, Image, TSpan, Text,
-};
+use svg::node::element::{Definitions, Image, TSpan, Text};
 use svg::node::{Text as TextNode, Value};
 use thiserror::Error;
 
@@ -25,6 +23,48 @@ pub enum ThemeValue {
     FontStretch(FontStretch),
 }
 
+impl From<String> for ThemeValue {
+    fn from(value: String) -> Self {
+        ThemeValue::String(value)
+    }
+}
+
+impl From<&str> for ThemeValue {
+    fn from(value: &str) -> Self {
+        ThemeValue::String(value.to_string())
+    }
+}
+
+impl From<f32> for ThemeValue {
+    fn from(value: f32) -> Self {
+        ThemeValue::Float(value)
+    }
+}
+
+impl From<u32> for ThemeValue {
+    fn from(value: u32) -> Self {
+        ThemeValue::Int(value)
+    }
+}
+
+impl From<FontSlant> for ThemeValue {
+    fn from(value: FontSlant) -> Self {
+        ThemeValue::FontSlant(value)
+    }
+}
+
+impl From<FontBoldness> for ThemeValue {
+    fn from(value: FontBoldness) -> Self {
+        ThemeValue::FontBoldness(value)
+    }
+}
+
+impl From<FontStretch> for ThemeValue {
+    fn from(value: FontStretch) -> Self {
+        ThemeValue::FontStretch(value)
+    }
+}
+
 impl ThemeValue {
     pub fn as_string(&self) -> String {
         match self {
@@ -36,7 +76,7 @@ impl ThemeValue {
             ThemeValue::FontStretch(fs) => font_stretch_to_string(*fs),
         }
     }
-    
+
     pub fn as_float(&self) -> Option<f32> {
         match self {
             ThemeValue::Float(f) => Some(*f),
@@ -45,7 +85,7 @@ impl ThemeValue {
             _ => None,
         }
     }
-    
+
     pub fn as_int(&self) -> Option<u32> {
         match self {
             ThemeValue::Int(i) => Some(*i),
@@ -222,19 +262,37 @@ impl SvgRenderer {
                 pin_type,
                 group,
                 colors,
-            } => self.set_theme_str("Fill Color", default, pin_type, group, colors),
+            } => {
+                let string_colors: Vec<&str> = colors.iter().map(|s| s.as_str()).collect();
+                self.set_theme(
+                    "Fill Color",
+                    default.as_str(),
+                    pin_type.as_deref(),
+                    group.as_deref(),
+                    &string_colors,
+                )
+            }
             Command::Opacity {
                 default,
                 pin_type,
                 group,
                 opacities,
-            } => self.set_theme_float("Opacity", *default, *pin_type, *group, opacities),
+            } => self.set_theme("Opacity", *default, *pin_type, *group, opacities),
             Command::BorderColor {
                 default,
                 pin_type,
                 group,
                 colors,
-            } => self.set_theme_str("Border Color", default, pin_type, group, colors),
+            } => {
+                let string_colors: Vec<&str> = colors.iter().map(|s| s.as_str()).collect();
+                self.set_theme(
+                    "Border Color",
+                    default.as_str(),
+                    pin_type.as_deref(),
+                    group.as_deref(),
+                    &string_colors,
+                )
+            }
             Command::BorderWidth { width } => self.set_border_width(*width),
             Command::BorderOpacity { opacity } => self.set_border_opacity(*opacity),
             Command::Font {
@@ -242,19 +300,37 @@ impl SvgRenderer {
                 pin_type,
                 group,
                 fonts,
-            } => self.set_theme_str("Font", default, pin_type, group, fonts),
+            } => {
+                let string_fonts: Vec<&str> = fonts.iter().map(|s| s.as_str()).collect();
+                self.set_theme(
+                    "Font",
+                    default.as_str(),
+                    pin_type.as_deref(),
+                    group.as_deref(),
+                    &string_fonts,
+                )
+            }
             Command::FontSize {
                 default,
                 pin_type,
                 group,
                 sizes,
-            } => self.set_theme_float("Font Size", *default, *pin_type, *group, sizes),
+            } => self.set_theme("Font Size", *default, *pin_type, *group, sizes),
             Command::FontColor {
                 default,
                 pin_type,
                 group,
                 colors,
-            } => self.set_theme_str("Font Color", default, pin_type, group, colors),
+            } => {
+                let string_colors: Vec<&str> = colors.iter().map(|s| s.as_str()).collect();
+                self.set_theme(
+                    "Font Color",
+                    default.as_str(),
+                    pin_type.as_deref(),
+                    group.as_deref(),
+                    &string_colors,
+                )
+            }
             Command::FontSlant {
                 default,
                 pin_type,
@@ -278,13 +354,22 @@ impl SvgRenderer {
                 pin_type,
                 group,
                 colors,
-            } => self.set_theme_str("Font Outline", default, pin_type, group, colors),
+            } => {
+                let string_colors: Vec<&str> = colors.iter().map(|s| s.as_str()).collect();
+                self.set_theme(
+                    "Font Outline",
+                    default.as_str(),
+                    pin_type.as_deref(),
+                    group.as_deref(),
+                    &string_colors,
+                )
+            }
             Command::FontOutlineThickness {
                 default,
                 pin_type,
                 group,
                 thickness,
-            } => self.set_theme_float(
+            } => self.set_theme(
                 "Font Outline Thickness",
                 *default,
                 *pin_type,
@@ -504,64 +589,36 @@ impl SvgRenderer {
         }
     }
 
-    fn set_theme_str(
+    /// Set theme values of any supported type
+    fn set_theme<T>(
         &mut self,
         entry: &str,
-        default: &str,
-        pin_type: &Option<String>,
-        group: &Option<String>,
-        values: &[String],
-    ) -> Result<(), RenderError> {
+        default: T,
+        pin_type: Option<T>,
+        group: Option<T>,
+        values: &[T],
+    ) -> Result<(), RenderError>
+    where
+        T: Clone + Into<ThemeValue>,
+    {
         // Set the theme entry for the default theme
-        self.set_theme_value("DEFAULT", entry, ThemeValue::String(default.to_string()));
+        self.set_theme_value("DEFAULT", entry, default.into());
 
         // Set for pin type if provided
         if let Some(pt) = pin_type {
-            self.set_theme_value("TYPE", entry, ThemeValue::String(pt.clone()));
+            self.set_theme_value("TYPE", entry, pt.into());
         }
 
         // Set for group if provided
         if let Some(g) = group {
-            self.set_theme_value("GROUP", entry, ThemeValue::String(g.clone()));
+            self.set_theme_value("GROUP", entry, g.into());
         }
 
         // Set for each pin function type
         for (i, value) in values.iter().enumerate() {
             if i < self.pin_func_types.len() {
                 let pin_func = &self.pin_func_types[i].clone();
-                self.set_theme_value(pin_func, entry, ThemeValue::String(value.clone()));
-            }
-        }
-
-        Ok(())
-    }
-
-    fn set_theme_float(
-        &mut self,
-        entry: &str,
-        default: f32,
-        pin_type: Option<f32>,
-        group: Option<f32>,
-        values: &[f32],
-    ) -> Result<(), RenderError> {
-        // Set the theme entry for the default theme
-        self.set_theme_value("DEFAULT", entry, ThemeValue::Float(default));
-
-        // Set for pin type if provided
-        if let Some(pt) = pin_type {
-            self.set_theme_value("TYPE", entry, ThemeValue::Float(pt));
-        }
-
-        // Set for group if provided
-        if let Some(g) = group {
-            self.set_theme_value("GROUP", entry, ThemeValue::Float(g));
-        }
-
-        // Set for each pin function type
-        for (i, &value) in values.iter().enumerate() {
-            if i < self.pin_func_types.len() {
-                let pin_func = &self.pin_func_types[i].clone();
-                self.set_theme_value(pin_func, entry, ThemeValue::Float(value));
+                self.set_theme_value(pin_func, entry, value.clone().into());
             }
         }
 
@@ -579,12 +636,12 @@ impl SvgRenderer {
     }
 
     fn set_border_width(&mut self, width: u32) -> Result<(), RenderError> {
-        self.set_theme_value("DEFAULT", "Border Width", ThemeValue::Int(width));
+        self.set_theme_value("DEFAULT", "Border Width", width.into());
         Ok(())
     }
 
     fn set_border_opacity(&mut self, opacity: f32) -> Result<(), RenderError> {
-        self.set_theme_value("DEFAULT", "Border Opacity", ThemeValue::Float(opacity));
+        self.set_theme_value("DEFAULT", "Border Opacity", opacity.into());
         Ok(())
     }
 
@@ -595,28 +652,7 @@ impl SvgRenderer {
         group: Option<FontSlant>,
         slants: &[FontSlant],
     ) -> Result<(), RenderError> {
-        // Set the theme entry for the default theme
-        self.set_theme_value("DEFAULT", "Font Slant", ThemeValue::FontSlant(default));
-
-        // Set for pin type if provided
-        if let Some(pt) = pin_type {
-            self.set_theme_value("TYPE", "Font Slant", ThemeValue::FontSlant(pt));
-        }
-
-        // Set for group if provided
-        if let Some(g) = group {
-            self.set_theme_value("GROUP", "Font Slant", ThemeValue::FontSlant(g));
-        }
-
-        // Set for each pin function type
-        for (i, &slant) in slants.iter().enumerate() {
-            if i < self.pin_func_types.len() {
-                let pin_func = &self.pin_func_types[i].clone();
-                self.set_theme_value(pin_func, "Font Slant", ThemeValue::FontSlant(slant));
-            }
-        }
-
-        Ok(())
+        self.set_theme("Font Slant", default, pin_type, group, slants)
     }
 
     fn set_font_bold(
@@ -626,28 +662,7 @@ impl SvgRenderer {
         group: Option<FontBoldness>,
         boldness: &[FontBoldness],
     ) -> Result<(), RenderError> {
-        // Set the theme entry for the default theme
-        self.set_theme_value("DEFAULT", "Font Bold", ThemeValue::FontBoldness(default));
-
-        // Set for pin type if provided
-        if let Some(pt) = pin_type {
-            self.set_theme_value("TYPE", "Font Bold", ThemeValue::FontBoldness(pt));
-        }
-
-        // Set for group if provided
-        if let Some(g) = group {
-            self.set_theme_value("GROUP", "Font Bold", ThemeValue::FontBoldness(g));
-        }
-
-        // Set for each pin function type
-        for (i, &bold) in boldness.iter().enumerate() {
-            if i < self.pin_func_types.len() {
-                let pin_func = &self.pin_func_types[i].clone();
-                self.set_theme_value(pin_func, "Font Bold", ThemeValue::FontBoldness(bold));
-            }
-        }
-
-        Ok(())
+        self.set_theme("Font Bold", default, pin_type, group, boldness)
     }
 
     fn set_font_stretch(
@@ -657,28 +672,7 @@ impl SvgRenderer {
         group: Option<FontStretch>,
         stretches: &[FontStretch],
     ) -> Result<(), RenderError> {
-        // Set the theme entry for the default theme
-        self.set_theme_value("DEFAULT", "Font Stretch", ThemeValue::FontStretch(default));
-
-        // Set for pin type if provided
-        if let Some(pt) = pin_type {
-            self.set_theme_value("TYPE", "Font Stretch", ThemeValue::FontStretch(pt));
-        }
-
-        // Set for group if provided
-        if let Some(g) = group {
-            self.set_theme_value("GROUP", "Font Stretch", ThemeValue::FontStretch(g));
-        }
-
-        // Set for each pin function type
-        for (i, &stretch) in stretches.iter().enumerate() {
-            if i < self.pin_func_types.len() {
-                let pin_func = &self.pin_func_types[i].clone();
-                self.set_theme_value(pin_func, "Font Stretch", ThemeValue::FontStretch(stretch));
-            }
-        }
-
-        Ok(())
+        self.set_theme("Font Stretch", default, pin_type, group, stretches)
     }
 
     fn set_pin_type(
@@ -693,7 +687,10 @@ impl SvgRenderer {
         let theme_map = self.themes.entry(theme_entry).or_insert_with(HashMap::new);
 
         // Set the color and opacity
-        theme_map.insert("FILL COLOR".to_string(), ThemeValue::String(color.to_string()));
+        theme_map.insert(
+            "FILL COLOR".to_string(),
+            ThemeValue::String(color.to_string()),
+        );
         theme_map.insert("OPACITY".to_string(), ThemeValue::Float(opacity));
 
         Ok(())
@@ -712,7 +709,10 @@ impl SvgRenderer {
         let theme_map = self.themes.entry(theme_entry).or_insert_with(HashMap::new);
 
         // Set the color, opacity, and thickness
-        theme_map.insert("FILL COLOR".to_string(), ThemeValue::String(color.to_string()));
+        theme_map.insert(
+            "FILL COLOR".to_string(),
+            ThemeValue::String(color.to_string()),
+        );
         theme_map.insert("OPACITY".to_string(), ThemeValue::Float(opacity));
         theme_map.insert("THICKNESS".to_string(), ThemeValue::Float(thickness));
 
@@ -726,7 +726,10 @@ impl SvgRenderer {
         let theme_map = self.themes.entry(theme_entry).or_insert_with(HashMap::new);
 
         // Set the color and opacity
-        theme_map.insert("FILL COLOR".to_string(), ThemeValue::String(color.to_string()));
+        theme_map.insert(
+            "FILL COLOR".to_string(),
+            ThemeValue::String(color.to_string()),
+        );
         theme_map.insert("OPACITY".to_string(), ThemeValue::Float(opacity));
 
         Ok(())
@@ -753,9 +756,18 @@ impl SvgRenderer {
         let theme_map = self.themes.entry(theme_entry).or_insert_with(HashMap::new);
 
         // Set all box theme parameters
-        theme_map.insert("BORDER COLOR".to_string(), ThemeValue::String(border_color.to_string()));
-        theme_map.insert("BORDER OPACITY".to_string(), ThemeValue::Float(border_opacity));
-        theme_map.insert("FILL COLOR".to_string(), ThemeValue::String(fill_color.to_string()));
+        theme_map.insert(
+            "BORDER COLOR".to_string(),
+            ThemeValue::String(border_color.to_string()),
+        );
+        theme_map.insert(
+            "BORDER OPACITY".to_string(),
+            ThemeValue::Float(border_opacity),
+        );
+        theme_map.insert(
+            "FILL COLOR".to_string(),
+            ThemeValue::String(fill_color.to_string()),
+        );
         theme_map.insert("OPACITY".to_string(), ThemeValue::Float(fill_opacity));
         theme_map.insert("BORDER WIDTH".to_string(), ThemeValue::Float(line_width));
         theme_map.insert("WIDTH".to_string(), ThemeValue::Float(box_width));
@@ -763,7 +775,10 @@ impl SvgRenderer {
         theme_map.insert("CORNER RX".to_string(), ThemeValue::Float(box_cr_x));
         theme_map.insert("CORNER RY".to_string(), ThemeValue::Float(box_cr_y));
         theme_map.insert("SKEW".to_string(), ThemeValue::Float(box_skew));
-        theme_map.insert("SKEW OFFSET".to_string(), ThemeValue::Float(box_skew_offset));
+        theme_map.insert(
+            "SKEW OFFSET".to_string(),
+            ThemeValue::Float(box_skew_offset),
+        );
 
         Ok(())
     }
@@ -787,8 +802,14 @@ impl SvgRenderer {
         // Set all text font parameters
         theme_map.insert("FONT".to_string(), ThemeValue::String(font.to_string()));
         theme_map.insert("FONT SIZE".to_string(), ThemeValue::Float(size));
-        theme_map.insert("OUTLINE COLOR".to_string(), ThemeValue::String(outline_color.to_string()));
-        theme_map.insert("FONT COLOR".to_string(), ThemeValue::String(color.to_string()));
+        theme_map.insert(
+            "OUTLINE COLOR".to_string(),
+            ThemeValue::String(outline_color.to_string()),
+        );
+        theme_map.insert(
+            "FONT COLOR".to_string(),
+            ThemeValue::String(color.to_string()),
+        );
         theme_map.insert("FONT SLANT".to_string(), ThemeValue::FontSlant(slant));
         theme_map.insert("FONT BOLD".to_string(), ThemeValue::FontBoldness(bold));
         theme_map.insert("FONT STRETCH".to_string(), ThemeValue::FontStretch(stretch));
@@ -869,7 +890,8 @@ impl SvgRenderer {
                 if !self.themes.contains_key(&box_theme) {
                     return Err(RenderError::SvgError(format!(
                         "Box {} used for {} theme, but not defined!",
-                        boxes.as_string(), theme_name
+                        boxes.as_string(),
+                        theme_name
                     )));
                 }
             }
@@ -1674,7 +1696,7 @@ impl SvgRenderer {
                 return value.as_string();
             }
         }
-        
+
         // Fall back to DEFAULT theme if the specific theme doesn't have the entry
         if theme_name != "DEFAULT" {
             if let Some(default_map) = self.themes.get("DEFAULT") {
@@ -1683,7 +1705,7 @@ impl SvgRenderer {
                 }
             }
         }
-        
+
         default.to_string()
     }
 
@@ -1695,7 +1717,7 @@ impl SvgRenderer {
                 }
             }
         }
-        
+
         // Fall back to DEFAULT theme if the specific theme doesn't have the entry
         if theme_name != "DEFAULT" {
             if let Some(default_map) = self.themes.get("DEFAULT") {
@@ -1706,7 +1728,7 @@ impl SvgRenderer {
                 }
             }
         }
-        
+
         default
     }
 

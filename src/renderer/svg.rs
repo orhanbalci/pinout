@@ -9,7 +9,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use svg::Document;
-use svg::node::element::{Definitions, Image, TSpan, Text};
+use svg::node::element::{Circle, Definitions, Image, Polygon, Polyline, TSpan, Text};
 use svg::node::{Text as TextNode, Value};
 use thiserror::Error;
 
@@ -62,6 +62,31 @@ impl From<FontBoldness> for ThemeValue {
 impl From<FontStretch> for ThemeValue {
     fn from(value: FontStretch) -> Self {
         ThemeValue::FontStretch(value)
+    }
+}
+
+/// Trait for extracting typed values from ThemeValue
+pub trait FromThemeValue {
+    fn from_theme_value(value: &ThemeValue) -> Option<Self>
+    where
+        Self: Sized;
+}
+
+impl FromThemeValue for String {
+    fn from_theme_value(value: &ThemeValue) -> Option<Self> {
+        Some(value.as_string())
+    }
+}
+
+impl FromThemeValue for f32 {
+    fn from_theme_value(value: &ThemeValue) -> Option<Self> {
+        value.as_float()
+    }
+}
+
+impl FromThemeValue for u32 {
+    fn from_theme_value(value: &ThemeValue) -> Option<Self> {
+        value.as_int()
     }
 }
 
@@ -1284,12 +1309,12 @@ impl SvgRenderer {
         if !text.is_empty() {
             // Get font settings from the theme
             let font_theme = self.get_font_theme(theme);
-            let font = self.get_theme(&font_theme, "FONT", "sans-serif");
-            let font_size = self.get_theme_float(&font_theme, "FONT SIZE", 10.0);
-            let font_color = self.get_theme(&font_theme, "FONT COLOR", "black");
-            let font_slant = self.get_theme(&font_theme, "FONT SLANT", "normal");
-            let font_bold = self.get_theme(&font_theme, "FONT BOLD", "normal");
-            let font_stretch = self.get_theme(&font_theme, "FONT STRETCH", "normal");
+            let font = self.get_theme(&font_theme, "FONT", "sans-serif".to_string());
+            let font_size = self.get_theme(&font_theme, "FONT SIZE", 10.0f32);
+            let font_color = self.get_theme(&font_theme, "FONT COLOR", "black".to_string());
+            let font_slant = self.get_theme(&font_theme, "FONT SLANT", "normal".to_string());
+            let font_bold = self.get_theme(&font_theme, "FONT BOLD", "normal".to_string());
+            let font_stretch = self.get_theme(&font_theme, "FONT STRETCH", "normal".to_string());
 
             // Calculate position for the text
             let (x, y) = self.get_pin_box_xy(box_offset_x, theme, line_height);
@@ -1535,12 +1560,12 @@ impl SvgRenderer {
             .unwrap()
             .parse::<f32>()
             .unwrap_or(12.0);
-        let font_family = self.get_theme(&font_theme, "FONT", "sans-serif");
-        let stroke = self.get_theme(&font_theme, "OUTLINE COLOR", "none");
-        let fill = self.get_theme(&font_theme, "FONT COLOR", "black");
-        let font_style = self.get_theme(&font_theme, "FONT SLANT", "normal");
-        let font_weight = self.get_theme(&font_theme, "FONT BOLD", "normal");
-        let font_stretch = self.get_theme(&font_theme, "FONT STRETCH", "normal");
+        let font_family = self.get_theme(&font_theme, "FONT", "sans-serif".to_string());
+        let stroke = self.get_theme(&font_theme, "OUTLINE COLOR", "none".to_string());
+        let fill = self.get_theme(&font_theme, "FONT COLOR", "black".to_string());
+        let font_style = self.get_theme(&font_theme, "FONT SLANT", "normal".to_string());
+        let font_weight = self.get_theme(&font_theme, "FONT BOLD", "normal".to_string());
+        let font_stretch = self.get_theme(&font_theme, "FONT STRETCH", "normal".to_string());
 
         let text_elem = Text::new("") //TODO this can corrupt output
             .set("x", x)
@@ -1582,8 +1607,7 @@ impl SvgRenderer {
 
         // Get default color if not specified
         let color = if color.is_empty() {
-            self.get_theme(&font_theme, "FONT COLOR", "black")
-                .to_owned()
+            self.get_theme(&font_theme, "FONT COLOR", "black".to_string())
         } else {
             color.to_owned()
         };
@@ -1686,34 +1710,15 @@ impl SvgRenderer {
         Ok(())
     }
 
-    fn get_theme(&self, font_theme: &str, entry: &str, default: &str) -> String {
-        self.get_theme_value(font_theme, entry, default)
-    }
-
-    fn get_theme_value(&self, theme_name: &str, entry: &str, default: &str) -> String {
+    /// Get theme value of any supported type
+    fn get_theme<T>(&self, theme_name: &str, entry: &str, default: T) -> T
+    where
+        T: FromThemeValue + From<T>,
+    {
         if let Some(theme_map) = self.themes.get(theme_name) {
             if let Some(value) = theme_map.get(entry) {
-                return value.as_string();
-            }
-        }
-
-        // Fall back to DEFAULT theme if the specific theme doesn't have the entry
-        if theme_name != "DEFAULT" {
-            if let Some(default_map) = self.themes.get("DEFAULT") {
-                if let Some(value) = default_map.get(entry) {
-                    return value.as_string();
-                }
-            }
-        }
-
-        default.to_string()
-    }
-
-    fn get_theme_float(&self, theme_name: &str, entry: &str, default: f32) -> f32 {
-        if let Some(theme_map) = self.themes.get(theme_name) {
-            if let Some(value) = theme_map.get(entry) {
-                if let Some(f) = value.as_float() {
-                    return f;
+                if let Some(result) = T::from_theme_value(value) {
+                    return result;
                 }
             }
         }
@@ -1722,8 +1727,8 @@ impl SvgRenderer {
         if theme_name != "DEFAULT" {
             if let Some(default_map) = self.themes.get("DEFAULT") {
                 if let Some(value) = default_map.get(entry) {
-                    if let Some(f) = value.as_float() {
-                        return f;
+                    if let Some(result) = T::from_theme_value(value) {
+                        return result;
                     }
                 }
             }
@@ -1749,7 +1754,7 @@ impl SvgRenderer {
     }
 
     fn get_box_theme(&self, box_theme: &str, entry: &str, default: &str) -> String {
-        self.get_theme_value(box_theme, entry, default)
+        self.get_theme(box_theme, entry, default.to_string())
     }
 
     fn get_pin_box_xy(&self, box_offset_x: f32, theme: &str, line_height: f32) -> (f32, f32) {
@@ -1761,12 +1766,220 @@ impl SvgRenderer {
     }
 
     fn print_pin(
-        &self,
+        &mut self,
         pin_type: Option<PinType>,
         wire: Option<WireType>,
         group: &Option<String>,
     ) -> Result<f32, RenderError> {
-        todo!()
+        let pin_width = self
+            .line_settings
+            .get("PINWIDTH")
+            .unwrap()
+            .parse::<f32>()
+            .unwrap_or(10.0);
+
+        let group_width = self
+            .line_settings
+            .get("GROUPWIDTH")
+            .unwrap()
+            .parse::<f32>()
+            .unwrap_or(20.0);
+
+        let leader_offset = self
+            .line_settings
+            .get("LEADER")
+            .unwrap()
+            .parse::<f32>()
+            .unwrap_or(20.0);
+
+        let line_step = self
+            .line_settings
+            .get("LINESTEP")
+            .unwrap()
+            .parse::<f32>()
+            .unwrap_or(10.0);
+
+        let side = self
+            .line_settings
+            .get("SIDE")
+            .unwrap_or(&Value::from("LEFT"))
+            .to_string();
+
+        let pin_box_offset = self.offset_x + (group_width / 2.0);
+        let pin_center_x = if side.contains("RIGHT") {
+            self.anchor_x + pin_box_offset
+        } else {
+            self.anchor_x - pin_box_offset
+        };
+
+        let pin_center_y = self.anchor_y + self.offset_y + (line_step / 2.0);
+
+        // Draw group circle if group is specified
+        if let Some(group_name) = group {
+            let group_theme = format!("GROUP_{}", group_name);
+            if self.themes.contains_key(&group_theme) {
+                let fill_color = self.get_theme(&group_theme, "FILL COLOR", "black".to_string());
+                let fill_opacity = self.get_theme(&group_theme, "OPACITY", 1.0f32);
+
+                let circle = Circle::new()
+                    .set("cx", pin_center_x)
+                    .set("cy", pin_center_y)
+                    .set("r", group_width / 2.0)
+                    .set("stroke", "black")
+                    .set("stroke-width", "2")
+                    .set("stroke-opacity", "1")
+                    .set("fill", fill_color)
+                    .set("fill-opacity", fill_opacity);
+
+                self.document = self.document.clone().add(circle);
+            } else {
+                return Err(RenderError::SvgError(format!(
+                    "Error: PinGroup {} is not defined",
+                    group_name
+                )));
+            }
+        }
+
+        // Draw pin type indicator
+        if let Some(pin_type_val) = pin_type {
+            match pin_type_val {
+                PinType::IO => {
+                    let circle = Circle::new()
+                        .set("cx", pin_center_x)
+                        .set("cy", pin_center_y)
+                        .set("r", pin_width / 2.0)
+                        .set("stroke", "black")
+                        .set("fill", "black")
+                        .set("opacity", "1");
+
+                    self.document = self.document.clone().add(circle);
+                }
+                PinType::Input | PinType::Output => {
+                    let triangle_edge_length = (pin_width / 2.0) * 3.0_f32.sqrt();
+                    let triangle_center_shift = pin_width / 4.0;
+
+                    let points = if (side.contains("LEFT") && pin_type_val == PinType::Output)
+                        || (side.contains("RIGHT") && pin_type_val == PinType::Input)
+                    {
+                        format!(
+                            "{},{} {},{} {},{}",
+                            triangle_center_shift,
+                            triangle_edge_length / 2.0,
+                            triangle_center_shift,
+                            -triangle_edge_length / 2.0,
+                            -pin_width / 2.0,
+                            0.0
+                        )
+                    } else {
+                        format!(
+                            "{},{} {},{} {},{}",
+                            -triangle_center_shift,
+                            triangle_edge_length / 2.0,
+                            -triangle_center_shift,
+                            -triangle_edge_length / 2.0,
+                            pin_width / 2.0,
+                            0.0
+                        )
+                    };
+
+                    let polygon = Polygon::new()
+                        .set("points", points)
+                        .set("stroke", "black")
+                        .set("fill", "black")
+                        .set("opacity", "1")
+                        .set(
+                            "transform",
+                            format!("translate({},{})", pin_center_x, pin_center_y),
+                        );
+
+                    self.document = self.document.clone().add(polygon);
+                }
+            }
+        }
+
+        // Draw leader line if leader_offset > 0
+        let return_pin_width = group_width + leader_offset;
+
+        if leader_offset > 0.0 {
+            if let Some(wire_type) = wire {
+                let wire_theme = format!("PINWIRE_{}", wire_type);
+                let color = self.get_theme(&wire_theme, "FILL COLOR", "black".to_string());
+                let opacity = self.get_theme(&wire_theme, "OPACITY", 1.0f32);
+                let thickness = self.get_theme(&wire_theme, "THICKNESS", 1.0f32);
+
+                let points = match wire_type {
+                    WireType::Pwm => {
+                        // Square wave
+                        let step = leader_offset / 4.0;
+                        format!(
+                            "0,0 {step},0 {step},{} {},{} {},{} {},{} {},{} {},0",
+                            -group_width / 2.0,
+                            step * 2.0,
+                            -group_width / 2.0,
+                            step * 2.0,
+                            group_width / 2.0,
+                            step * 3.0,
+                            group_width / 2.0,
+                            step * 3.0,
+                            0.0,
+                            step * 4.0
+                        )
+                    }
+                    WireType::Analog | WireType::HsAnalog => {
+                        // Sine wave
+                        let max_angle = if wire_type == WireType::Analog {
+                            360.0
+                        } else {
+                            720.0
+                        };
+                        let step = leader_offset / 4.0;
+                        let sine_width = step * 2.0;
+
+                        let mut points_vec = vec![format!("0,0"), format!("{},0", step)];
+
+                        for i in 0..((sine_width * 10.0) as i32) {
+                            let i_f = i as f32 / 10.0;
+                            let x = i_f + step;
+                            let y = ((max_angle / sine_width) * i_f).to_radians().sin()
+                                * (-group_width / 2.0);
+                            points_vec.push(format!("{},{}", x, y));
+                        }
+                        points_vec.push(format!("{},0", step * 4.0));
+
+                        points_vec.join(" ")
+                    }
+                    _ => {
+                        // Power and Digital - just a line
+                        format!("0,0 {},0", leader_offset)
+                    }
+                };
+
+                let leader_x = if side.contains("LEFT") {
+                    pin_center_x - (group_width / 2.0) - leader_offset
+                } else {
+                    pin_center_x + (group_width / 2.0)
+                };
+
+                let polyline = Polyline::new()
+                    .set("points", points)
+                    .set("fill", "none")
+                    .set("stroke", color)
+                    .set("opacity", opacity)
+                    .set("stroke-width", thickness)
+                    .set(
+                        "transform",
+                        format!("translate({},{})", leader_x, pin_center_y),
+                    );
+
+                self.document = self.document.clone().add(polyline);
+            }
+        }
+
+        if side.contains("LEFT") {
+            Ok(-return_pin_width)
+        } else {
+            Ok(return_pin_width)
+        }
     }
 
     // Helper methods

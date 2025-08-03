@@ -318,3 +318,51 @@ impl fmt::Display for WireType {
         }
     }
 }
+
+impl fmt::Display for FontSlant {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FontSlant::Normal => write!(f, "normal"),
+            FontSlant::Italic => write!(f, "italic"),
+            FontSlant::Oblique => write!(f, "oblique"),
+        }
+    }
+}
+
+impl fmt::Display for FontBoldness {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FontBoldness::Normal => write!(f, "normal"),
+            FontBoldness::Bold => write!(f, "bold"),
+            FontBoldness::Bolder => write!(f, "bolder"),
+            FontBoldness::Lighter => write!(f, "lighter"),
+            FontBoldness::Weight100 => write!(f, "100"),
+            FontBoldness::Weight200 => write!(f, "200"),
+            FontBoldness::Weight300 => write!(f, "300"),
+            FontBoldness::Weight400 => write!(f, "400"),
+            FontBoldness::Weight500 => write!(f, "500"),
+            FontBoldness::Weight600 => write!(f, "600"),
+            FontBoldness::Weight700 => write!(f, "700"),
+            FontBoldness::Weight800 => write!(f, "800"),
+            FontBoldness::Weight900 => write!(f, "900"),
+        }
+    }
+}
+
+impl fmt::Display for FontStretch {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FontStretch::Normal => write!(f, "normal"),
+            FontStretch::Wider => write!(f, "wider"),
+            FontStretch::Narrower => write!(f, "narrower"),
+            FontStretch::UltraCondensed => write!(f, "ultra-condensed"),
+            FontStretch::ExtraCondensed => write!(f, "extra-condensed"),
+            FontStretch::Condensed => write!(f, "condensed"),
+            FontStretch::SemiCondensed => write!(f, "semi-condensed"),
+            FontStretch::SemiExpanded => write!(f, "semi-expanded"),
+            FontStretch::Expanded => write!(f, "expanded"),
+            FontStretch::ExtraExpanded => write!(f, "extra-expanded"),
+            FontStretch::UltraExpanded => write!(f, "ultra-expanded"),
+        }
+    }
+}

@@ -781,6 +781,7 @@ impl SvgRenderer {
         box_skew_offset: f32,
     ) -> Result<(), RenderError> {
         let theme_entry = format!("BOX_{}", name);
+        dbg!(&theme_entry);
 
         // Create or get the theme map
         let theme_map = self.themes.entry(theme_entry).or_insert_with(HashMap::new);
@@ -1199,9 +1200,11 @@ impl SvgRenderer {
             if index < self.pin_func_types.len() {
                 let pin_func = self.pin_func_types[index].clone();
 
+    
                 if !attr.is_empty() {
                     // Calculate position for the text box
                     let (x, y) = self.get_pin_box_xy(box_offset_x, &pin_func, line_height);
+            
 
                     // Get justification settings before borrowing self mutably
                     let justify_x = self
@@ -1216,7 +1219,7 @@ impl SvgRenderer {
                         .to_string();
 
                     // Draw the text box
-                    self.text_box(x, y, &pin_func, attr, &justify_x, &justify_y)?;
+                    self.text_box(x, y, "BOX_PIN BOX", &pin_func, attr, &justify_x, &justify_y)?;
 
                     // Increment the box offset for the next box
                     let side = self
@@ -1224,7 +1227,8 @@ impl SvgRenderer {
                         .get("SIDE")
                         .cloned()
                         .unwrap_or(Value::from("LEFT"));
-                    box_offset_x = self.inc_offset_x(box_offset_x, &side, &pin_func);
+                    box_offset_x = self.inc_offset_x(box_offset_x, &side, "PIN BOX");
+                    
                 } else if self
                     .line_settings
                     .get("PACK")
@@ -1296,7 +1300,7 @@ impl SvgRenderer {
                     .to_string();
 
                 // Draw the text box with the label
-                self.text_box(x, y, &pin_func, label_text, &justify_x, &justify_y)?;
+                self.text_box(x, y, "BOX_PIN BOX", &pin_func, label_text, &justify_x, &justify_y)?;
 
                 // Increment the box offset for the text
                 let side = self
@@ -1418,7 +1422,7 @@ impl SvgRenderer {
 
         // Draw the text box
         let text_content = text.as_deref().unwrap_or("");
-        self.text_box(x, y, &box_theme, text_content, x_justify_str, y_justify_str)?;
+        self.text_box(x, y, &box_theme, theme, text_content, x_justify_str, y_justify_str)?;
 
         Ok(())
     }
@@ -1753,30 +1757,31 @@ impl SvgRenderer {
         x: f32,
         y: f32,
         box_theme: &str,
+        pin_func: &str,
         text_content: &str,
         x_justify_str: &str,
         y_justify_str: &str,
     ) -> Result<f32, RenderError> {
         // Get theme values
-        let border_color = self.get_theme(box_theme, "Border Color", "red".to_string());
-        let border_width = self.get_theme(box_theme, "Border Width", 1.0f32);
-        let border_opacity = self.get_theme(box_theme, "Border Opacity", 1.0f32);
-        let fill_color = self.get_theme(box_theme, "Fill Color", "blue".to_string());
-        let opacity = self.get_theme(box_theme, "Opacity", 50.0f32);
-        let font = self.get_theme(box_theme, "Font", "sans-serif".to_string());
-        let fontsize = self.get_theme(box_theme, "Font Size", 10.0f32);
-        let fontcolor = self.get_theme(box_theme, "Font Color", "yellow".to_string());
-        let fontslant = self.get_theme(box_theme, "Font Slant", "normal".to_string());
-        let fontbold = self.get_theme(box_theme, "Font Bold", "normal".to_string());
-        let fontstretch = self.get_theme(box_theme, "Font Stretch", "normal".to_string());
-        let fontoutline = self.get_theme(box_theme, "Font Outline", fontcolor.clone());
-        let fontoutthick = self.get_theme(box_theme, "Font Outline Thickness", 0.0f32);
+        let border_color = self.get_theme(pin_func, "BORDER COLOR", "red".to_string());
+        let border_width = self.get_theme(pin_func, "BORDER WIDTH", 1.0f32);
+        let border_opacity = self.get_theme(pin_func, "BORDER OPACITY", 1.0f32);
+        let fill_color = self.get_theme(pin_func, "FILL COLOR", "blue".to_string());
+        let opacity = self.get_theme(pin_func, "OPACITY", 50.0f32);
+        let font = self.get_theme(pin_func, "FONT", "sans-serif".to_string());
+        let fontsize = self.get_theme(pin_func, "FONT SIZE", 10.0f32);
+        let fontcolor = self.get_theme(pin_func, "FONT COLOR", "yellow".to_string());
+        let fontslant = self.get_theme(pin_func, "FONT SLANT", "normal".to_string());
+        let fontbold = self.get_theme(pin_func, "FONT BOLD", "normal".to_string());
+        let fontstretch = self.get_theme(pin_func, "FONT STRETCH", "normal".to_string());
+        let fontoutline = self.get_theme(pin_func, "FONT OUTLINE", fontcolor.clone());
+        let fontoutthick = self.get_theme(pin_func, "FONT OUTLINE THICKNESS", 0.0f32);
 
-        let w = self.get_theme(box_theme, "Width", 0.0f32);
-        let h = self.get_theme(box_theme, "Height", 0.0f32);
-        let corner_rx = self.get_theme(box_theme, "Corner RX", 0.0f32);
-        let corner_ry = self.get_theme(box_theme, "Corner RY", 0.0f32);
-        let skew = self.get_theme(box_theme, "Skew", 0.0f32);
+        let w = self.get_theme(box_theme, "WIDTH", 0.0f32);
+        let h = self.get_theme(box_theme, "HEIGHT", 0.0f32);
+        let corner_rx = self.get_theme(box_theme, "CORNER RX", 0.0f32);
+        let corner_ry = self.get_theme(box_theme, "CORNER RY", 0.0f32);
+        let skew = self.get_theme(box_theme, "SKEW", 0.0f32);
 
         // Calculate alignment
         let (xanchor, xalign) = match x_justify_str {
@@ -1879,8 +1884,19 @@ impl SvgRenderer {
         Ok(w) // Return width as in the original signature
     }
 
-    fn get_box_theme(&self, box_theme: &str, entry: &str, default: &str) -> String {
-        self.get_theme(box_theme, entry, default.to_string())
+    fn get_box_theme(&self, theme: &str, entry: &str, default: &str) -> String {
+        let box_theme = if !theme.starts_with("BOX_") {
+                format!("BOX_{}", theme)
+        } else {
+            theme.to_string()
+        };
+
+        if !self.themes.contains_key(&box_theme) {
+            eprintln!("ERROR: BOX Theme {} not known!", box_theme);
+            return default.to_string();
+        }
+
+        self.get_theme(&box_theme, entry, default.to_string())
     }
 
     fn get_pin_box_xy(&self, box_offset_x: f32, theme: &str, line_height: f32) -> (f32, f32) {
@@ -1895,7 +1911,7 @@ impl SvgRenderer {
             .to_string();
         if side.contains("LEFT") {
             let box_width = self
-                .get_box_theme(theme, "Width", "0")
+                .get_box_theme(theme, "WIDTH", "0")
                 .parse::<f32>()
                 .unwrap_or(0.0);
             x = x - box_width;
@@ -1903,7 +1919,7 @@ impl SvgRenderer {
 
         let mut y = self.anchor_y + self.offset_y;
         let box_height = self
-            .get_box_theme(theme, "Height", "0")
+            .get_box_theme(theme, "HEIGHT", "0")
             .parse::<f32>()
             .unwrap_or(0.0);
 
@@ -1924,6 +1940,7 @@ impl SvgRenderer {
     }
 
     fn inc_offset_x(&self, box_offset_x: f32, side: &str, pin_func: &str) -> f32 {
+        
         let gap = self
             .line_settings
             .get("GAP")
@@ -1932,7 +1949,7 @@ impl SvgRenderer {
             .unwrap_or(0.0);
 
         let box_width = self
-            .get_box_theme(pin_func, "Width", "0")
+            .get_box_theme(pin_func, "WIDTH", "0")
             .parse::<f32>()
             .unwrap_or(0.0);
 

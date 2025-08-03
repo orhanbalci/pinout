@@ -64,7 +64,6 @@ fn parse_command(
     record: &StringRecord,
     phase: Phase,
 ) -> Result<Command, ParserError> {
-    println!("handling command {}", command_name);
     match (command_name.as_str(), phase) {
         // Setup Phase Commands
         ("LABELS", Phase::Setup) => parse_label_command(record),

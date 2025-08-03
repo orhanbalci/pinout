@@ -292,7 +292,7 @@ impl SvgRenderer {
             } => {
                 let string_colors: Vec<&str> = colors.iter().map(|s| s.as_str()).collect();
                 self.set_theme(
-                    "Fill Color",
+                    "FILL COLOR",
                     default.as_str(),
                     pin_type.as_deref(),
                     group.as_deref(),
@@ -304,7 +304,7 @@ impl SvgRenderer {
                 pin_type,
                 group,
                 opacities,
-            } => self.set_theme("Opacity", *default, *pin_type, *group, opacities),
+            } => self.set_theme("OPACITY", *default, *pin_type, *group, opacities),
             Command::BorderColor {
                 default,
                 pin_type,
@@ -313,7 +313,7 @@ impl SvgRenderer {
             } => {
                 let string_colors: Vec<&str> = colors.iter().map(|s| s.as_str()).collect();
                 self.set_theme(
-                    "Border Color",
+                    "BORDER COLOR",
                     default.as_str(),
                     pin_type.as_deref(),
                     group.as_deref(),
@@ -330,7 +330,7 @@ impl SvgRenderer {
             } => {
                 let string_fonts: Vec<&str> = fonts.iter().map(|s| s.as_str()).collect();
                 self.set_theme(
-                    "Font",
+                    "FONT",
                     default.as_str(),
                     pin_type.as_deref(),
                     group.as_deref(),
@@ -342,7 +342,7 @@ impl SvgRenderer {
                 pin_type,
                 group,
                 sizes,
-            } => self.set_theme("Font Size", *default, *pin_type, *group, sizes),
+            } => self.set_theme("FONT SIZE", *default, *pin_type, *group, sizes),
             Command::FontColor {
                 default,
                 pin_type,
@@ -351,7 +351,7 @@ impl SvgRenderer {
             } => {
                 let string_colors: Vec<&str> = colors.iter().map(|s| s.as_str()).collect();
                 self.set_theme(
-                    "Font Color",
+                    "FONT COLOR",
                     default.as_str(),
                     pin_type.as_deref(),
                     group.as_deref(),
@@ -384,7 +384,7 @@ impl SvgRenderer {
             } => {
                 let string_colors: Vec<&str> = colors.iter().map(|s| s.as_str()).collect();
                 self.set_theme(
-                    "Font Outline",
+                    "FONT OUTLINE",
                     default.as_str(),
                     pin_type.as_deref(),
                     group.as_deref(),
@@ -397,7 +397,7 @@ impl SvgRenderer {
                 group,
                 thickness,
             } => self.set_theme(
-                "Font Outline Thickness",
+                "FONT OUTLINE THICKNESS",
                 *default,
                 *pin_type,
                 *group,
@@ -666,12 +666,12 @@ impl SvgRenderer {
     }
 
     fn set_border_width(&mut self, width: u32) -> Result<(), RenderError> {
-        self.set_theme_value("DEFAULT", "Border Width", width.into());
+        self.set_theme_value("DEFAULT", "BORDER WIDTH", width.into());
         Ok(())
     }
 
     fn set_border_opacity(&mut self, opacity: f32) -> Result<(), RenderError> {
-        self.set_theme_value("DEFAULT", "Border Opacity", opacity.into());
+        self.set_theme_value("DEFAULT", "BORDER OPACITY", opacity.into());
         Ok(())
     }
 
@@ -682,7 +682,7 @@ impl SvgRenderer {
         group: Option<FontSlant>,
         slants: &[FontSlant],
     ) -> Result<(), RenderError> {
-        self.set_theme("Font Slant", default, pin_type, group, slants)
+        self.set_theme("FONT SLANT", default, pin_type, group, slants)
     }
 
     fn set_font_bold(
@@ -692,7 +692,7 @@ impl SvgRenderer {
         group: Option<FontBoldness>,
         boldness: &[FontBoldness],
     ) -> Result<(), RenderError> {
-        self.set_theme("Font Bold", default, pin_type, group, boldness)
+        self.set_theme("FONT BOLD", default, pin_type, group, boldness)
     }
 
     fn set_font_stretch(
@@ -702,7 +702,7 @@ impl SvgRenderer {
         group: Option<FontStretch>,
         stretches: &[FontStretch],
     ) -> Result<(), RenderError> {
-        self.set_theme("Font Stretch", default, pin_type, group, stretches)
+        self.set_theme("FONT STRETCH", default, pin_type, group, stretches)
     }
 
     fn set_pin_type(
@@ -781,7 +781,6 @@ impl SvgRenderer {
         box_skew_offset: f32,
     ) -> Result<(), RenderError> {
         let theme_entry = format!("BOX_{}", name);
-        dbg!(&theme_entry);
 
         // Create or get the theme map
         let theme_map = self.themes.entry(theme_entry).or_insert_with(HashMap::new);
@@ -1203,7 +1202,7 @@ impl SvgRenderer {
     
                 if !attr.is_empty() {
                     // Calculate position for the text box
-                    let (x, y) = self.get_pin_box_xy(box_offset_x, &pin_func, line_height);
+                    let (x, y) = self.get_pin_box_xy(box_offset_x, "BOX_SKEWED", line_height);
             
 
                     // Get justification settings before borrowing self mutably
@@ -1219,7 +1218,7 @@ impl SvgRenderer {
                         .to_string();
 
                     // Draw the text box
-                    self.text_box(x, y, "BOX_PIN BOX", &pin_func, attr, &justify_x, &justify_y)?;
+                    self.text_box(x, y, "BOX_SKEWED", &pin_func, attr, &justify_x, &justify_y)?;
 
                     // Increment the box offset for the next box
                     let side = self
@@ -1227,7 +1226,7 @@ impl SvgRenderer {
                         .get("SIDE")
                         .cloned()
                         .unwrap_or(Value::from("LEFT"));
-                    box_offset_x = self.inc_offset_x(box_offset_x, &side, "PIN BOX");
+                    box_offset_x = self.inc_offset_x(box_offset_x, &side, "BOX_SKEWED");
                     
                 } else if self
                     .line_settings
@@ -1322,6 +1321,7 @@ impl SvgRenderer {
             let font_slant = self.get_theme(&font_theme, "FONT SLANT", "normal".to_string());
             let font_bold = self.get_theme(&font_theme, "FONT BOLD", "normal".to_string());
             let font_stretch = self.get_theme(&font_theme, "FONT STRETCH", "normal".to_string());
+
 
             // Calculate position for the text
             let (x, y) = self.get_pin_box_xy(box_offset_x, theme, line_height);
@@ -1441,40 +1441,40 @@ impl SvgRenderer {
         self.end_message()?;
 
         // Set message settings
-        self.message_settings.insert("Newline".into(), false.into());
+        self.message_settings.insert("NEWLINE".into(), false.into());
 
         // Set x and y if provided
         if let Some(x_val) = x {
             self.message_settings.insert("X".into(), x_val.into());
-            self.message_settings.insert("OffsetX".into(), 0.0.into());
+            self.message_settings.insert("OFFSETX".into(), 0.0.into());
         }
 
         if let Some(y_val) = y {
             self.message_settings.insert("Y".into(), y_val.into());
-            self.message_settings.insert("OffsetY".into(), 0.0.into());
+            self.message_settings.insert("OFFSETY".into(), 0.0.into());
         }
 
         // Set line step if provided
         if let Some(step) = line_step {
-            self.message_settings.insert("LineStep".into(), step.into());
-        } else if !self.message_settings.contains_key("LineStep") {
-            self.message_settings.insert("LineStep".into(), 15.0.into()); // Default
+            self.message_settings.insert("LINESTEP".into(), step.into());
+        } else if !self.message_settings.contains_key("LINESTEP") {
+            self.message_settings.insert("LINESTEP".into(), 15.0.into()); // Default
         }
 
         // Set font if provided
         if let Some(f) = font {
             self.message_settings
-                .insert("Font".into(), f.clone().into());
-        } else if !self.message_settings.contains_key("Font") {
+                .insert("FONT".into(), f.clone().into());
+        } else if !self.message_settings.contains_key("FONT") {
             self.message_settings
-                .insert("Font".into(), "sans-serif".into()); // Default
+                .insert("FONT".into(), "sans-serif".into()); // Default
         }
 
         // Set font size if provided
         if let Some(size) = font_size {
-            self.message_settings.insert("FontSize".into(), size.into());
-        } else if !self.message_settings.contains_key("FontSize") {
-            self.message_settings.insert("FontSize".into(), 12.0.into()); // Default
+            self.message_settings.insert("FONTSIZE".into(), size.into());
+        } else if !self.message_settings.contains_key("FONTSIZE") {
+            self.message_settings.insert("FONTSIZE".into(), 12.0.into()); // Default
         }
 
         // Set justify settings
@@ -1493,9 +1493,9 @@ impl SvgRenderer {
         };
 
         self.message_settings
-            .insert("XJustify".into(), x_justify_str.into());
+            .insert("XJUSTIFY".into(), x_justify_str.into());
         self.message_settings
-            .insert("YJustify".into(), y_justify_str.into());
+            .insert("YJUSTIFY".into(), y_justify_str.into());
 
         // Set text anchor based on x justification
         let text_anchor = match x_justify {
@@ -1507,7 +1507,7 @@ impl SvgRenderer {
         // Set y shift based on y justification
         let font_size = self
             .message_settings
-            .get("FontSize")
+            .get("FONTSIZE")
             .unwrap()
             .parse::<f32>()
             .unwrap_or(12.0);
@@ -1518,12 +1518,12 @@ impl SvgRenderer {
         };
 
         self.message_settings
-            .insert("YShift".into(), y_shift.into());
+            .insert("YSHIFT".into(), y_shift.into());
 
         // Get font theme
         let font_name = self
             .message_settings
-            .get("Font")
+            .get("FONT")
             .cloned()
             .unwrap_or(Value::from("sans-serif"));
         let font_theme = self.get_font_theme(&font_name);
@@ -1537,7 +1537,7 @@ impl SvgRenderer {
             .unwrap_or(0.0)
             + self
                 .message_settings
-                .get("OffsetX")
+                .get("OFFSETX")
                 .unwrap()
                 .parse::<f32>()
                 .unwrap_or(0.0);
@@ -1550,20 +1550,20 @@ impl SvgRenderer {
             .unwrap_or(0.0)
             + self
                 .message_settings
-                .get("OffsetY")
+                .get("OFFSETY")
                 .unwrap()
                 .parse::<f32>()
                 .unwrap_or(0.0)
             + self
                 .message_settings
-                .get("YShift")
+                .get("YSHIFT")
                 .unwrap()
                 .parse::<f32>()
                 .unwrap_or(0.0);
 
         let font_size = self
             .message_settings
-            .get("FontSize")
+            .get("FONTSIZE")
             .unwrap()
             .parse::<f32>()
             .unwrap_or(12.0);
@@ -1607,7 +1607,7 @@ impl SvgRenderer {
         let font_theme = self.get_font_theme(
             &self
                 .message_settings
-                .get("Font")
+                .get("FONT")
                 .unwrap_or(&Value::from("sans-serif"))
                 .to_string(),
         );
@@ -1631,29 +1631,29 @@ impl SvgRenderer {
         // Check if we need to start a new line
         if self
             .message_settings
-            .get("Newline")
+            .get("NEWLINE")
             .unwrap()
             .parse()
             .unwrap_or(false)
         {
             // Reset newline flag
-            self.message_settings.insert("Newline".into(), false.into());
+            self.message_settings.insert("NEWLINE".into(), false.into());
 
             // Update Y offset
             let offset_y = self
                 .message_settings
-                .get("OffsetY")
+                .get("OFFSETY")
                 .unwrap()
                 .parse::<f32>()
                 .unwrap_or(0.0);
             let line_step = self
                 .message_settings
-                .get("LineStep")
+                .get("LINESTEP")
                 .unwrap()
                 .parse::<f32>()
                 .unwrap_or(15.0);
             self.message_settings
-                .insert("OffsetY".into(), (offset_y + line_step).into());
+                .insert("OFFSETY".into(), (offset_y + line_step).into());
 
             // Set position for new line
             let x = self
@@ -1664,7 +1664,7 @@ impl SvgRenderer {
                 .unwrap_or(0.0)
                 + self
                     .message_settings
-                    .get("OffsetX")
+                    .get("OFFSETX")
                     .unwrap()
                     .parse::<f32>()
                     .unwrap_or(0.0);
@@ -1677,13 +1677,13 @@ impl SvgRenderer {
                 .unwrap_or(0.0)
                 + self
                     .message_settings
-                    .get("OffsetY")
+                    .get("OFFSETY")
                     .unwrap()
                     .parse::<f32>()
                     .unwrap_or(0.0)
                 + self
                     .message_settings
-                    .get("YShift")
+                    .get("YSHIFT")
                     .unwrap()
                     .parse::<f32>()
                     .unwrap_or(0.0);
@@ -1704,7 +1704,7 @@ impl SvgRenderer {
 
         // Set newline flag if needed
         if new_line {
-            self.message_settings.insert("Newline".into(), true.into());
+            self.message_settings.insert("NEWLINE".into(), true.into());
         }
 
         Ok(())
@@ -1777,6 +1777,7 @@ impl SvgRenderer {
         let fontoutline = self.get_theme(pin_func, "FONT OUTLINE", fontcolor.clone());
         let fontoutthick = self.get_theme(pin_func, "FONT OUTLINE THICKNESS", 0.0f32);
 
+
         let w = self.get_theme(box_theme, "WIDTH", 0.0f32);
         let h = self.get_theme(box_theme, "HEIGHT", 0.0f32);
         let corner_rx = self.get_theme(box_theme, "CORNER RX", 0.0f32);
@@ -1808,7 +1809,7 @@ impl SvgRenderer {
             .set("rx", corner_rx)
             .set("ry", corner_ry)
             .set("stroke", border_color)
-            .set("fill-opacity", opacity / 100.0) // Convert percentage to decimal
+            .set("fill-opacity", opacity) // Convert percentage to decimal
             .set("fill", fill_color)
             .set("stroke-width", border_width)
             .set("stroke-opacity", border_opacity);
@@ -1886,13 +1887,19 @@ impl SvgRenderer {
 
     fn get_box_theme(&self, theme: &str, entry: &str, default: &str) -> String {
         let box_theme = if !theme.starts_with("BOX_") {
-                format!("BOX_{}", theme)
+            // Get the box name from the theme's "BOXES" entry
+            let box_name = self.get_theme(theme, "BOXES", "STD".to_string());
+            if box_name == "STD" || box_name.is_empty() {
+                theme.to_string() // Use theme name directly if no specific box
+            } else {
+                format!("BOX_{}", box_name)
+            }
         } else {
             theme.to_string()
         };
 
         if !self.themes.contains_key(&box_theme) {
-            eprintln!("ERROR: BOX Theme {} not known!", box_theme);
+            // eprintln!("ERROR: BOX Theme {} not known!", box_theme);
             return default.to_string();
         }
 
@@ -2191,14 +2198,52 @@ impl SvgRenderer {
         Ok(())
     }
 
+    /// Print the content of all themes for debugging
+    pub fn print_themes(&self) {
+        println!("=== THEMES CONTENT ===");
+        if self.themes.is_empty() {
+            println!("No themes defined.");
+            return;
+        }
+
+        for (theme_name, theme_map) in &self.themes {
+            println!("\nTheme: '{}'", theme_name);
+            if theme_map.is_empty() {
+                println!("  (empty)");
+            } else {
+                for (entry, value) in theme_map {
+                    println!("  {} = {}", entry, value.as_string());
+                }
+            }
+        }
+        println!("=== END THEMES ===\n");
+    }
+
+    /// Print the content of a specific theme for debugging
+    pub fn print_theme(&self, theme_name: &str) {
+        println!("=== THEME: '{}' ===", theme_name);
+        if let Some(theme_map) = self.themes.get(theme_name) {
+            if theme_map.is_empty() {
+                println!("  (empty)");
+            } else {
+                for (entry, value) in theme_map {
+                    println!("  {} = {}", entry, value.as_string());
+                }
+            }
+        } else {
+            println!("  Theme not found!");
+        }
+        println!("=== END THEME ===\n");
+    }
+
     // Helper methods
 }
 
-fn get_size(size: Option<f32>, max_size: f32, default: Option<f64>) -> f32 {
+fn get_size(size: Option<f32>, max_size: f32, default: Option<f32>) -> f32 {
     match size {
         None => match default {
             None => max_size,
-            Some(default_val) => default_val as f32,
+            Some(default_val) => default_val,
         },
         Some(size_val) => {
             if size_val >= 1.0 {
@@ -2214,6 +2259,23 @@ fn get_size(size: Option<f32>, max_size: f32, default: Option<f64>) -> f32 {
 pub fn generate_svg(commands: &[Command], output_path: &str) -> Result<(), RenderError> {
     let mut renderer = SvgRenderer::new();
     renderer.process_commands(commands)?;
+    
+    // Print themes for debugging (you can comment this out in production)
+    renderer.print_themes();
+    
+    renderer.save_to_file(output_path)?;
+    Ok(())
+}
+
+/// Generate SVG file from commands with optional theme debugging
+pub fn generate_svg_with_debug(commands: &[Command], output_path: &str, debug_themes: bool) -> Result<(), RenderError> {
+    let mut renderer = SvgRenderer::new();
+    renderer.process_commands(commands)?;
+    
+    if debug_themes {
+        renderer.print_themes();
+    }
+    
     renderer.save_to_file(output_path)?;
     Ok(())
 }

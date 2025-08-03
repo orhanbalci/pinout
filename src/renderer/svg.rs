@@ -9,7 +9,9 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use svg::Document;
-use svg::node::element::{Circle, Definitions, Group, Image, Polygon, Polyline, Rectangle, TSpan, Text};
+use svg::node::element::{
+    Circle, Definitions, Group, Image, Polygon, Polyline, Rectangle, TSpan, Text,
+};
 use svg::node::{Text as TextNode, Value};
 use thiserror::Error;
 
@@ -1309,7 +1311,7 @@ impl SvgRenderer {
         // If text is provided, draw it after the label
         if !text.is_empty() {
             // Get font settings from the theme
-            let font_theme = self.get_font_theme(theme);
+            let font_theme = theme;
             let font = self.get_theme(&font_theme, "FONT", "sans-serif".to_string());
             let font_size = self.get_theme(&font_theme, "FONT SIZE", 10.0f32);
             let font_color = self.get_theme(&font_theme, "FONT COLOR", "black".to_string());
@@ -1739,7 +1741,11 @@ impl SvgRenderer {
     }
 
     fn get_font_theme(&self, font_name: &str) -> String {
-        todo!()
+        if self.themes.contains_key(font_name) {
+            font_name.to_string()
+        } else {
+            format!("FONT_{}", font_name)
+        }
     }
 
     fn text_box(
@@ -1765,7 +1771,7 @@ impl SvgRenderer {
         let fontstretch = self.get_theme(box_theme, "Font Stretch", "normal".to_string());
         let fontoutline = self.get_theme(box_theme, "Font Outline", fontcolor.clone());
         let fontoutthick = self.get_theme(box_theme, "Font Outline Thickness", 0.0f32);
-        
+
         let w = self.get_theme(box_theme, "Width", 0.0f32);
         let h = self.get_theme(box_theme, "Height", 0.0f32);
         let corner_rx = self.get_theme(box_theme, "Corner RX", 0.0f32);
@@ -1812,10 +1818,10 @@ impl SvgRenderer {
         // Add text if content exists
         if !text_content.is_empty() {
             let fontoutopacity = if fontoutthick > 0.0 { 1.0 } else { 0.0 };
-            
+
             // Split content by "\\n" for multi-line support
             let lines: Vec<&str> = text_content.split("\\n").collect();
-            
+
             let (yalign1, yalign2) = if lines.len() == 1 {
                 (yalign, -1.0) // Single line
             } else {
@@ -1864,7 +1870,7 @@ impl SvgRenderer {
         // Apply translation
         boxgroup = boxgroup.set(
             "transform",
-            format!("translate({},{})", x + (w / 2.0), y + (h / 2.0))
+            format!("translate({},{})", x + (w / 2.0), y + (h / 2.0)),
         );
 
         // Add to document
@@ -1878,11 +1884,67 @@ impl SvgRenderer {
     }
 
     fn get_pin_box_xy(&self, box_offset_x: f32, theme: &str, line_height: f32) -> (f32, f32) {
-        todo!()
+        let mut x = self.anchor_x + self.offset_x + box_offset_x;
+
+        // On the Left side we need to pre-decrement the X coordinate
+        // otherwise we align to the wrong box edge.
+        let side = self
+            .line_settings
+            .get("SIDE")
+            .unwrap_or(&Value::from("LEFT"))
+            .to_string();
+        if side.contains("LEFT") {
+            let box_width = self
+                .get_box_theme(theme, "Width", "0")
+                .parse::<f32>()
+                .unwrap_or(0.0);
+            x = x - box_width;
+        }
+
+        let mut y = self.anchor_y + self.offset_y;
+        let box_height = self
+            .get_box_theme(theme, "Height", "0")
+            .parse::<f32>()
+            .unwrap_or(0.0);
+
+        let justify_y = self
+            .line_settings
+            .get("JUSTIFY Y")
+            .unwrap_or(&Value::from("CENTER"))
+            .to_string();
+
+        if justify_y == "CENTER" {
+            y = y + ((line_height - box_height) / 2.0);
+        } else if justify_y == "BOTTOM" {
+            y = y + (line_height - box_height);
+        }
+        // For "TOP", no adjustment needed (pass)
+
+        (x, y)
     }
 
     fn inc_offset_x(&self, box_offset_x: f32, side: &str, pin_func: &str) -> f32 {
-        todo!()
+        let gap = self
+            .line_settings
+            .get("GAP")
+            .unwrap()
+            .parse::<f32>()
+            .unwrap_or(0.0);
+
+        let box_width = self
+            .get_box_theme(pin_func, "Width", "0")
+            .parse::<f32>()
+            .unwrap_or(0.0);
+
+        let x_span = gap + box_width;
+
+        if side.contains("LEFT") {
+            box_offset_x - x_span
+        } else if side.contains("RIGHT") {
+            box_offset_x + x_span
+        } else {
+            box_offset_x // No change for other sides
+        }
     }
 
     fn print_pin(
@@ -2115,8 +2177,20 @@ impl SvgRenderer {
     // Helper methods
 }
 
-fn get_size(x: Option<f32>, page_resolution: f32, some: Option<f64>) -> f32 {
-    todo!()
+fn get_size(size: Option<f32>, max_size: f32, default: Option<f64>) -> f32 {
+    match size {
+        None => match default {
+            None => max_size,
+            Some(default_val) => default_val as f32,
+        },
+        Some(size_val) => {
+            if size_val >= 1.0 {
+                size_val
+            } else {
+                (size_val / 0.9999) * max_size
+            }
+        }
+    }
 }
 
 /// Generate SVG file from commands

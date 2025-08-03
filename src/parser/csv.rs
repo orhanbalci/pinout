@@ -146,14 +146,14 @@ fn parse_font_outline_command(record: &StringRecord) -> Result<Command, ParserEr
         ));
     }
 
-    let default = record.get(1).unwrap().to_string();
-    let pin_type = record.get(2).map(|s| s.to_string());
-    let group = record.get(3).map(|s| s.to_string());
+    let default = record.get(1).unwrap().trim().to_string();
+    let pin_type = record.get(2).map(|s| s.trim().to_string());
+    let group = record.get(3).map(|s| s.trim().to_string());
 
     let mut colors = Vec::new();
     for i in 4..record.len() {
         if let Some(color) = record.get(i) {
-            colors.push(color.to_string());
+            colors.push(color.trim().to_string());
         }
     }
 
@@ -209,14 +209,14 @@ fn parse_label_command(record: &StringRecord) -> Result<Command, ParserError> {
         ));
     }
 
-    let default = record.get(1).unwrap().to_string();
-    let pin_type = record.get(2).map(|s| s.to_string());
-    let group = record.get(3).map(|s| s.to_string());
+    let default = record.get(1).unwrap().trim().to_string();
+    let pin_type = record.get(2).map(|s| s.trim().to_string());
+    let group = record.get(3).map(|s| s.trim().to_string());
 
     let mut labels = Vec::new();
     for i in 4..record.len() {
         if let Some(label) = record.get(i) {
-            labels.push(label.to_string());
+            labels.push(label.trim().to_string());
         }
     }
 
@@ -238,14 +238,14 @@ fn parse_border_color_command(record: &StringRecord) -> Result<Command, ParserEr
         ));
     }
 
-    let default = record.get(1).unwrap().to_string();
-    let pin_type = record.get(2).map(|s| s.to_string());
-    let group = record.get(3).map(|s| s.to_string());
+    let default = record.get(1).unwrap().trim().to_string();
+    let pin_type = record.get(2).map(|s| s.trim().to_string());
+    let group = record.get(3).map(|s| s.trim().to_string());
 
     let mut colors = Vec::new();
     for i in 4..record.len() {
         if let Some(color) = record.get(i) {
-            colors.push(color.to_string());
+            colors.push(color.trim().to_string());
         }
     }
 
@@ -265,6 +265,7 @@ fn parse_pin_command(record: &StringRecord) -> Result<Command, ParserError> {
     }
 
     let wire = record.get(1).and_then(|s| {
+        let s = s.trim();
         if s.is_empty() {
             None
         } else {
@@ -280,6 +281,7 @@ fn parse_pin_command(record: &StringRecord) -> Result<Command, ParserError> {
     });
 
     let pin_type = record.get(2).and_then(|s| {
+        let s = s.trim();
         if s.is_empty() {
             None
         } else {
@@ -293,6 +295,7 @@ fn parse_pin_command(record: &StringRecord) -> Result<Command, ParserError> {
     });
 
     let group = record.get(3).and_then(|s| {
+        let s = s.trim();
         if s.is_empty() {
             None
         } else {
@@ -303,7 +306,7 @@ fn parse_pin_command(record: &StringRecord) -> Result<Command, ParserError> {
     let mut attributes = Vec::new();
     for i in 4..record.len() {
         if let Some(attr) = record.get(i) {
-            attributes.push(attr.to_string());
+            attributes.push(attr.trim().to_string());
         }
     }
 
@@ -319,6 +322,7 @@ fn parse_pin_command(record: &StringRecord) -> Result<Command, ParserError> {
 // Helper functions for parsing values
 fn parse_f32(value: &str) -> Result<f32, ParserError> {
     // First, try to parse as f32 directly
+    let value = value.trim(); // Trim the input
 
     match value.parse::<f32>() {
         Ok(float_val) => Ok(float_val),
@@ -339,12 +343,14 @@ fn parse_f32(value: &str) -> Result<f32, ParserError> {
 }
 
 fn parse_u32(value: &str) -> Result<u32, ParserError> {
+    let value = value.trim(); // Trim the input
     value
         .parse()
         .map_err(|_| ParserError::ParseError(format!("Failed to parse integer: {}", value)))
 }
 
 fn parse_justify_x(value: &str) -> Result<JustifyX, ParserError> {
+    let value = value.trim(); // Trim the input
     match value.to_uppercase().as_str() {
         "LEFT" => Ok(JustifyX::Left),
         "RIGHT" => Ok(JustifyX::Right),
@@ -357,6 +363,7 @@ fn parse_justify_x(value: &str) -> Result<JustifyX, ParserError> {
 }
 
 fn parse_justify_y(value: &str) -> Result<JustifyY, ParserError> {
+    let value = value.trim(); // Trim the input
     match value.to_uppercase().as_str() {
         "TOP" => Ok(JustifyY::Top),
         "BOTTOM" => Ok(JustifyY::Bottom),
@@ -377,14 +384,14 @@ fn parse_fill_color_command(record: &StringRecord) -> Result<Command, ParserErro
         ));
     }
 
-    let default = record.get(1).unwrap().to_string();
-    let pin_type = record.get(2).map(|s| s.to_string());
-    let group = record.get(3).map(|s| s.to_string());
+    let default = record.get(1).unwrap().trim().to_string();
+    let pin_type = record.get(2).map(|s| s.trim().to_string());
+    let group = record.get(3).map(|s| s.trim().to_string());
 
     let mut colors = Vec::new();
     for i in 4..record.len() {
         if let Some(color) = record.get(i) {
-            colors.push(color.to_string());
+            colors.push(color.trim().to_string());
         }
     }
 
@@ -432,14 +439,14 @@ fn parse_font_command(record: &StringRecord) -> Result<Command, ParserError> {
         ));
     }
 
-    let default = record.get(1).unwrap().to_string();
-    let pin_type = record.get(2).map(|s| s.to_string());
-    let group = record.get(3).map(|s| s.to_string());
+    let default = record.get(1).unwrap().trim().to_string();
+    let pin_type = record.get(2).map(|s| s.trim().to_string());
+    let group = record.get(3).map(|s| s.trim().to_string());
 
     let mut fonts = Vec::new();
     for i in 4..record.len() {
         if let Some(font) = record.get(i) {
-            fonts.push(font.to_string());
+            fonts.push(font.trim().to_string());
         }
     }
 
@@ -487,14 +494,14 @@ fn parse_font_color_command(record: &StringRecord) -> Result<Command, ParserErro
         ));
     }
 
-    let default = record.get(1).unwrap().to_string();
-    let pin_type = record.get(2).map(|s| s.to_string());
-    let group = record.get(3).map(|s| s.to_string());
+    let default = record.get(1).unwrap().trim().to_string();
+    let pin_type = record.get(2).map(|s| s.trim().to_string());
+    let group = record.get(3).map(|s| s.trim().to_string());
 
     let mut colors = Vec::new();
     for i in 4..record.len() {
         if let Some(color) = record.get(i) {
-            colors.push(color.to_string());
+            colors.push(color.trim().to_string());
         }
     }
 
@@ -631,7 +638,7 @@ fn parse_type_command(record: &StringRecord) -> Result<Command, ParserError> {
         }
     };
 
-    let color = record.get(2).unwrap().to_string();
+    let color = record.get(2).unwrap().trim().to_string();
     let opacity = parse_f32(record.get(3).unwrap())?;
 
     Ok(Command::Type {
@@ -663,7 +670,7 @@ fn parse_wire_command(record: &StringRecord) -> Result<Command, ParserError> {
         }
     };
 
-    let color = record.get(2).unwrap().to_string();
+    let color = record.get(2).unwrap().trim().to_string();
     let opacity = parse_f32(record.get(3).unwrap())?;
     let thickness = parse_f32(record.get(4).unwrap())?;
 
@@ -682,8 +689,8 @@ fn parse_group_command(record: &StringRecord) -> Result<Command, ParserError> {
         ));
     }
 
-    let name = record.get(1).unwrap().to_string();
-    let color = record.get(2).unwrap().to_string();
+    let name = record.get(1).unwrap().trim().to_string();
+    let color = record.get(2).unwrap().trim().to_string();
     let opacity = parse_f32(record.get(3).unwrap())?;
 
     Ok(Command::Group {
@@ -700,10 +707,10 @@ fn parse_box_theme_command(record: &StringRecord) -> Result<Command, ParserError
         ));
     }
 
-    let name = record.get(1).unwrap().to_string();
-    let border_color = record.get(2).unwrap().to_string();
+    let name = record.get(1).unwrap().trim().to_string();
+    let border_color = record.get(2).unwrap().trim().to_string();
     let border_opacity = parse_f32(record.get(3).unwrap())?;
-    let fill_color = record.get(4).unwrap().to_string();
+    let fill_color = record.get(4).unwrap().trim().to_string();
     let fill_opacity = parse_f32(record.get(5).unwrap())?;
     let line_width = parse_f32(record.get(6).unwrap())?;
     let box_width = parse_f32(record.get(7).unwrap())?;
@@ -736,11 +743,11 @@ fn parse_text_font_command(record: &StringRecord) -> Result<Command, ParserError
         ));
     }
 
-    let theme_name = record.get(1).unwrap().to_string();
-    let font = record.get(2).unwrap().to_string();
+    let theme_name = record.get(1).unwrap().trim().to_string();
+    let font = record.get(2).unwrap().trim().to_string();
     let size = parse_f32(record.get(3).unwrap())?;
-    let outline_color = record.get(4).unwrap().to_string();
-    let color = record.get(5).unwrap().to_string();
+    let outline_color = record.get(4).unwrap().trim().to_string();
+    let color = record.get(5).unwrap().trim().to_string();
     let slant = parse_font_slant(record.get(6).unwrap().trim())?;
     let bold = parse_font_boldness(record.get(7).unwrap().trim())?;
     let stretch = parse_font_stretch(record.get(8).unwrap().trim())?;
@@ -788,7 +795,7 @@ fn parse_google_font_command(record: &StringRecord) -> Result<Command, ParserErr
         ));
     }
 
-    let link = record.get(1).unwrap().to_string();
+    let link = record.get(1).unwrap().trim().to_string();
 
     Ok(Command::GoogleFont { link })
 }
@@ -800,7 +807,7 @@ fn parse_image_command(record: &StringRecord) -> Result<Command, ParserError> {
         ));
     }
 
-    let name = record.get(1).unwrap().to_string();
+    let name = record.get(1).unwrap().trim().to_string();
 
     // Parse x and y as size values that can be either integers or percentages
     // Parse width and height as optional size values
@@ -878,7 +885,7 @@ fn parse_icon_command(record: &StringRecord) -> Result<Command, ParserError> {
         ));
     }
 
-    let name = record.get(1).unwrap().to_string();
+    let name = record.get(1).unwrap().trim().to_string();
 
     // Parse x and y as size values that can be either integers or percentages
     let x = record
@@ -1000,6 +1007,7 @@ fn parse_pin_text_command(record: &StringRecord) -> Result<Command, ParserError>
     }
 
     let wire = record.get(1).and_then(|s| {
+        let s = s.trim();
         if s.is_empty() {
             None
         } else {
@@ -1015,6 +1023,7 @@ fn parse_pin_text_command(record: &StringRecord) -> Result<Command, ParserError>
     });
 
     let pin_type = record.get(2).and_then(|s| {
+        let s = s.trim();
         if s.is_empty() {
             None
         } else {
@@ -1028,6 +1037,7 @@ fn parse_pin_text_command(record: &StringRecord) -> Result<Command, ParserError>
     });
 
     let group = record.get(3).and_then(|s| {
+        let s = s.trim();
         if s.is_empty() {
             None
         } else {
@@ -1035,9 +1045,10 @@ fn parse_pin_text_command(record: &StringRecord) -> Result<Command, ParserError>
         }
     });
 
-    let theme = record.get(4).unwrap().to_string();
+    let theme = record.get(4).unwrap().trim().to_string();
 
     let label = record.get(5).and_then(|s| {
+        let s = s.trim();
         if s.is_empty() {
             None
         } else {
@@ -1045,7 +1056,7 @@ fn parse_pin_text_command(record: &StringRecord) -> Result<Command, ParserError>
         }
     });
 
-    let text = record.get(6).unwrap_or("").to_string();
+    let text = record.get(6).unwrap_or("").trim().to_string();
 
     Ok(Command::PinText {
         wire,
@@ -1064,7 +1075,7 @@ fn parse_box_command(record: &StringRecord) -> Result<Command, ParserError> {
         ));
     }
 
-    let theme = record.get(1).unwrap().to_string();
+    let theme = record.get(1).unwrap().trim().to_string();
     let x = parse_f32(record.get(2).unwrap())?;
     let y = parse_f32(record.get(3).unwrap())?;
 
@@ -1072,7 +1083,7 @@ fn parse_box_command(record: &StringRecord) -> Result<Command, ParserError> {
     let box_height = record.get(5).and_then(|s| parse_f32(s).ok());
     let x_justify = record.get(6).and_then(|s| parse_justify_x(s.trim()).ok());
     let y_justify = record.get(7).and_then(|s| parse_justify_y(s.trim()).ok());
-    let text = record.get(8).map(|s| s.to_string());
+    let text = record.get(8).map(|s| s.trim().to_string());
 
     Ok(Command::Box {
         theme,
@@ -1090,7 +1101,7 @@ fn parse_message_command(record: &StringRecord) -> Result<Command, ParserError> 
     let x = record.get(1).and_then(|s| parse_f32(s).ok());
     let y = record.get(2).and_then(|s| parse_f32(s).ok());
     let line_step = record.get(3).and_then(|s| parse_f32(s).ok());
-    let font = record.get(4).map(|s| s.to_string());
+    let font = record.get(4).map(|s| s.trim().to_string());
     let font_size = record.get(5).and_then(|s| parse_f32(s).ok());
     let x_justify = record.get(6).and_then(|s| parse_justify_x(s.trim()).ok());
     let y_justify = record.get(7).and_then(|s| parse_justify_y(s.trim()).ok());
@@ -1113,9 +1124,9 @@ fn parse_text_command(record: &StringRecord) -> Result<Command, ParserError> {
         ));
     }
 
-    let edge_color = record.get(1).unwrap().to_string();
-    let color = record.get(2).unwrap().to_string();
-    let message = record.get(3).unwrap().to_string();
+    let edge_color = record.get(1).unwrap().trim().to_string();
+    let color = record.get(2).unwrap().trim().to_string();
+    let message = record.get(3).unwrap().trim().to_string();
 
     let new_line = record.get(4).is_some();
 
@@ -1129,6 +1140,7 @@ fn parse_text_command(record: &StringRecord) -> Result<Command, ParserError> {
 
 // Helper functions for parsing specific types
 fn parse_font_slant(value: &str) -> Result<FontSlant, ParserError> {
+    let value = value.trim(); // Trim the input
     match value.to_lowercase().as_str() {
         "normal" => Ok(FontSlant::Normal),
         "italic" => Ok(FontSlant::Italic),
@@ -1141,6 +1153,7 @@ fn parse_font_slant(value: &str) -> Result<FontSlant, ParserError> {
 }
 
 fn parse_font_boldness(value: &str) -> Result<FontBoldness, ParserError> {
+    let value = value.trim(); // Trim the input
     match value.to_lowercase().as_str() {
         "normal" => Ok(FontBoldness::Normal),
         "bold" => Ok(FontBoldness::Bold),
@@ -1163,6 +1176,7 @@ fn parse_font_boldness(value: &str) -> Result<FontBoldness, ParserError> {
 }
 
 fn parse_font_stretch(value: &str) -> Result<FontStretch, ParserError> {
+    let value = value.trim(); // Trim the input
     match value.to_lowercase().as_str() {
         "normal" => Ok(FontStretch::Normal),
         "wider" => Ok(FontStretch::Wider),
@@ -1183,6 +1197,7 @@ fn parse_font_stretch(value: &str) -> Result<FontStretch, ParserError> {
 }
 
 fn parse_side(value: &str) -> Result<Side, ParserError> {
+    let value = value.trim(); // Trim the input
     match value.to_uppercase().as_str() {
         "LEFT" => Ok(Side::Left),
         "RIGHT" => Ok(Side::Right),
@@ -1193,6 +1208,7 @@ fn parse_side(value: &str) -> Result<Side, ParserError> {
 }
 
 fn parse_size(value: &str) -> Result<f32, ParserError> {
+    let value = value.trim(); // Trim the input
     if value.is_empty() {
         return Err(ParserError::ParseError("Empty size value".to_string()));
     }

@@ -712,8 +712,8 @@ fn parse_box_theme_command(record: &StringRecord) -> Result<Command, ParserError
     let fill_color = record.get(4).unwrap().trim().to_string();
     let fill_opacity = parse_f32(record.get(5).unwrap())?;
     let line_width = parse_f32(record.get(6).unwrap())?;
-    let box_width = parse_f32(record.get(7).unwrap())?;
-    let box_height = parse_f32(record.get(8).unwrap())?;
+    let box_width = parse_size(record.get(7).unwrap())?;
+    let box_height = parse_size(record.get(8).unwrap())?;
     let box_cr_x = parse_f32(record.get(9).unwrap())?;
     let box_cr_y = parse_f32(record.get(10).unwrap())?;
     let box_skew = parse_f32(record.get(11).unwrap())?;
@@ -1078,8 +1078,8 @@ fn parse_box_command(record: &StringRecord) -> Result<Command, ParserError> {
     let x = parse_f32(record.get(2).unwrap())?;
     let y = parse_f32(record.get(3).unwrap())?;
 
-    let box_width = record.get(4).and_then(|s| parse_f32(s).ok());
-    let box_height = record.get(5).and_then(|s| parse_f32(s).ok());
+    let box_width = record.get(4).and_then(|s| parse_size(s).ok());
+    let box_height = record.get(5).and_then(|s| parse_size(s).ok());
     let x_justify = record.get(6).and_then(|s| parse_justify_x(s.trim()).ok());
     let y_justify = record.get(7).and_then(|s| parse_justify_y(s.trim()).ok());
     let message = record.get(8).map(|s| s.trim().to_string());

@@ -1035,7 +1035,7 @@ fn parse_pin_text_command(record: &StringRecord) -> Result<Command, ParserError>
         }
     });
 
-    let group = record.get(3).and_then(|s| {
+    let pin_group = record.get(3).and_then(|s| {
         let s = s.trim();
         if s.is_empty() {
             None
@@ -1044,9 +1044,7 @@ fn parse_pin_text_command(record: &StringRecord) -> Result<Command, ParserError>
         }
     });
 
-    let theme = record.get(4).unwrap().trim().to_string();
-
-    let label = record.get(5).and_then(|s| {
+    let label = record.get(4).and_then(|s| {
         let s = s.trim();
         if s.is_empty() {
             None
@@ -1055,15 +1053,17 @@ fn parse_pin_text_command(record: &StringRecord) -> Result<Command, ParserError>
         }
     });
 
-    let text = record.get(6).unwrap_or("").trim().to_string();
+    let msg_theme = record.get(5).unwrap().trim().to_string();
+
+    let message = record.get(6).unwrap_or("").trim().to_string();
 
     Ok(Command::PinText {
         wire,
         pin_type,
-        group,
-        theme,
+        pin_group,
+        msg_theme,
         label,
-        text,
+        message,
     })
 }
 
@@ -1082,7 +1082,7 @@ fn parse_box_command(record: &StringRecord) -> Result<Command, ParserError> {
     let box_height = record.get(5).and_then(|s| parse_f32(s).ok());
     let x_justify = record.get(6).and_then(|s| parse_justify_x(s.trim()).ok());
     let y_justify = record.get(7).and_then(|s| parse_justify_y(s.trim()).ok());
-    let text = record.get(8).map(|s| s.trim().to_string());
+    let message = record.get(8).map(|s| s.trim().to_string());
 
     Ok(Command::Box {
         theme,
@@ -1092,7 +1092,7 @@ fn parse_box_command(record: &StringRecord) -> Result<Command, ParserError> {
         box_height,
         x_justify,
         y_justify,
-        text,
+        message,
     })
 }
 

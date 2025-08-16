@@ -528,11 +528,11 @@ impl SvgRenderer {
             Command::PinText {
                 wire,
                 pin_type,
-                group,
-                theme,
+                pin_group,
+                msg_theme,
                 label,
-                text,
-            } => self.write_pin_text(*wire, *pin_type, group, theme, label, text),
+                message,
+            } => self.write_pin_text(*wire, *pin_type, pin_group, msg_theme, label, message),
             Command::Box {
                 theme,
                 x,
@@ -541,7 +541,7 @@ impl SvgRenderer {
                 box_height,
                 x_justify,
                 y_justify,
-                text,
+                message,
             } => self.draw_box(
                 theme,
                 *x,
@@ -550,7 +550,7 @@ impl SvgRenderer {
                 *box_height,
                 *x_justify,
                 *y_justify,
-                text,
+                message,
             ),
             Command::Message {
                 x,
@@ -1199,11 +1199,9 @@ impl SvgRenderer {
             if index < self.pin_func_types.len() {
                 let pin_func = self.pin_func_types[index].clone();
 
-    
                 if !attr.is_empty() {
                     // Calculate position for the text box
                     let (x, y) = self.get_pin_box_xy(box_offset_x, "BOX_SKEWED", line_height);
-            
 
                     // Get justification settings before borrowing self mutably
                     let justify_x = self
@@ -1218,7 +1216,17 @@ impl SvgRenderer {
                         .to_string();
 
                     // Draw the text box
-                    self.text_box(x, y, "BOX_SKEWED", &pin_func, attr, &justify_x, &justify_y)?;
+                    self.text_box(
+                        x,
+                        y,
+                        None,
+                        None,
+                        "BOX_SKEWED",
+                        &pin_func,
+                        attr,
+                        &justify_x,
+                        &justify_y,
+                    )?;
 
                     // Increment the box offset for the next box
                     let side = self
@@ -1227,7 +1235,6 @@ impl SvgRenderer {
                         .cloned()
                         .unwrap_or(Value::from("LEFT"));
                     box_offset_x = self.inc_offset_x(box_offset_x, &side, "BOX_SKEWED");
-                    
                 } else if self
                     .line_settings
                     .get("PACK")
@@ -1255,10 +1262,10 @@ impl SvgRenderer {
         &mut self,
         wire: Option<WireType>,
         pin_type: Option<PinType>,
-        group: &Option<String>,
-        theme: &str,
+        pin_group: &Option<String>,
+        msg_theme: &str,
         label: &Option<String>,
-        text: &str,
+        message: &str,
     ) -> Result<(), RenderError> {
         if self.line_settings.is_empty() {
             return Err(RenderError::SvgError(
@@ -1267,7 +1274,7 @@ impl SvgRenderer {
         }
 
         // Print the pin icon and leader line, and get the box offset
-        let mut box_offset_x = self.print_pin(pin_type, wire, group)?;
+        let mut box_offset_x = self.print_pin(pin_type, wire, pin_group)?;
 
         // Get line height from settings
         let line_height = self
@@ -1284,7 +1291,7 @@ impl SvgRenderer {
                 let pin_func = self.pin_func_types[0].clone(); // First pin function type
 
                 // Calculate position for the text box
-                let (x, y) = self.get_pin_box_xy(box_offset_x, &pin_func, line_height);
+                let (x, y) = self.get_pin_box_xy(box_offset_x, "BOX_SKEWED", line_height);
 
                 // Get justification settings before borrowing self mutably
                 let justify_x = self
@@ -1299,7 +1306,17 @@ impl SvgRenderer {
                     .to_string();
 
                 // Draw the text box with the label
-                self.text_box(x, y, "BOX_PIN BOX", &pin_func, label_text, &justify_x, &justify_y)?;
+                self.text_box(
+                    x,
+                    y,
+                    None,
+                    None,
+                    "BOX_SKEWED",
+                    &pin_func,
+                    label_text,
+                    &justify_x,
+                    &justify_y,
+                )?;
 
                 // Increment the box offset for the text
                 let side = self
@@ -1307,14 +1324,16 @@ impl SvgRenderer {
                     .get("SIDE")
                     .cloned()
                     .unwrap_or(Value::from("LEFT"));
-                box_offset_x = self.inc_offset_x(box_offset_x, &side, &pin_func);
+                if side.contains("RIGHT") {
+                    box_offset_x = self.inc_offset_x(box_offset_x, &side, "BOX_SKEWED");
+                }
             }
         }
 
         // If text is provided, draw it after the label
-        if !text.is_empty() {
+        if !message.is_empty() {
             // Get font settings from the theme
-            let font_theme = theme;
+            let font_theme = msg_theme;
             let font = self.get_theme(&font_theme, "FONT", "sans-serif".to_string());
             let font_size = self.get_theme(&font_theme, "FONT SIZE", 10.0f32);
             let font_color = self.get_theme(&font_theme, "FONT COLOR", "black".to_string());
@@ -1322,10 +1341,8 @@ impl SvgRenderer {
             let font_bold = self.get_theme(&font_theme, "FONT BOLD", "normal".to_string());
             let font_stretch = self.get_theme(&font_theme, "FONT STRETCH", "normal".to_string());
 
-
             // Calculate position for the text
-            let (x, y) = self.get_pin_box_xy(box_offset_x, theme, line_height);
-
+            let (x, y) = self.get_pin_box_xy(box_offset_x, "BOX_SKEWED", line_height);
             // Adjust X position for the gap
             let side = self
                 .line_settings
@@ -1362,7 +1379,7 @@ impl SvgRenderer {
                 .set("font-weight", font_bold)
                 .set("font-stretch", font_stretch)
                 .set("text-anchor", text_anchor)
-                .add(TextNode::new(text));
+                .add(TextNode::new(message));
 
             // Add text to document
             self.document = self.document.clone().add(text_elem);
@@ -1407,22 +1424,19 @@ impl SvgRenderer {
             None => "CENTER", // Default
         };
 
-        // Get width and height from theme or use provided values
-        let w = box_width.unwrap_or_else(|| {
-            self.get_box_theme(&box_theme, "WIDTH", "0")
-                .parse::<f32>()
-                .unwrap_or(0.0)
-        });
-
-        let h = box_height.unwrap_or_else(|| {
-            self.get_box_theme(&box_theme, "HEIGHT", "0")
-                .parse::<f32>()
-                .unwrap_or(0.0)
-        });
-
         // Draw the text box
         let text_content = text.as_deref().unwrap_or("");
-        self.text_box(x, y, &box_theme, theme, text_content, x_justify_str, y_justify_str)?;
+        self.text_box(
+            x,
+            y,
+            box_width,
+            box_height,
+            &box_theme,
+            theme,
+            text_content,
+            x_justify_str,
+            y_justify_str,
+        )?;
 
         Ok(())
     }
@@ -1756,6 +1770,8 @@ impl SvgRenderer {
         &mut self,
         x: f32,
         y: f32,
+        box_width: Option<f32>,
+        box_height: Option<f32>,
         box_theme: &str,
         pin_func: &str,
         text_content: &str,
@@ -1777,9 +1793,8 @@ impl SvgRenderer {
         let fontoutline = self.get_theme(pin_func, "FONT OUTLINE", fontcolor.clone());
         let fontoutthick = self.get_theme(pin_func, "FONT OUTLINE THICKNESS", 0.0f32);
 
-
-        let w = self.get_theme(box_theme, "WIDTH", 0.0f32);
-        let h = self.get_theme(box_theme, "HEIGHT", 0.0f32);
+        let w = box_width.unwrap_or_else(|| self.get_theme(box_theme, "WIDTH", 0.0f32));
+        let h = box_height.unwrap_or_else(|| self.get_theme(box_theme, "HEIGHT", 0.0f32));
         let corner_rx = self.get_theme(box_theme, "CORNER RX", 0.0f32);
         let corner_ry = self.get_theme(box_theme, "CORNER RY", 0.0f32);
         let skew = self.get_theme(box_theme, "SKEW", 0.0f32);
@@ -1947,7 +1962,6 @@ impl SvgRenderer {
     }
 
     fn inc_offset_x(&self, box_offset_x: f32, side: &str, pin_func: &str) -> f32 {
-        
         let gap = self
             .line_settings
             .get("GAP")
@@ -2259,23 +2273,27 @@ fn get_size(size: Option<f32>, max_size: f32, default: Option<f32>) -> f32 {
 pub fn generate_svg(commands: &[Command], output_path: &str) -> Result<(), RenderError> {
     let mut renderer = SvgRenderer::new();
     renderer.process_commands(commands)?;
-    
+
     // Print themes for debugging (you can comment this out in production)
-    renderer.print_themes();
-    
+    //renderer.print_themes();
+
     renderer.save_to_file(output_path)?;
     Ok(())
 }
 
 /// Generate SVG file from commands with optional theme debugging
-pub fn generate_svg_with_debug(commands: &[Command], output_path: &str, debug_themes: bool) -> Result<(), RenderError> {
+pub fn generate_svg_with_debug(
+    commands: &[Command],
+    output_path: &str,
+    debug_themes: bool,
+) -> Result<(), RenderError> {
     let mut renderer = SvgRenderer::new();
     renderer.process_commands(commands)?;
-    
+
     if debug_themes {
         renderer.print_themes();
     }
-    
+
     renderer.save_to_file(output_path)?;
     Ok(())
 }

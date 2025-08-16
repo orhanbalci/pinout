@@ -187,10 +187,10 @@ pub enum Command {
     PinText {
         wire: Option<WireType>,
         pin_type: Option<PinType>,
-        group: Option<String>,
-        theme: String,
+        pin_group: Option<String>,
+        msg_theme: String,
         label: Option<String>,
-        text: String,
+        message: String,
     },
     Box {
         theme: String,
@@ -200,7 +200,7 @@ pub enum Command {
         box_height: Option<f32>,
         x_justify: Option<JustifyX>,
         y_justify: Option<JustifyY>,
-        text: Option<String>,
+        message: Option<String>,
     },
     Message {
         x: Option<f32>,

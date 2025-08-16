@@ -796,7 +796,7 @@ fn parse_google_font_command(record: &StringRecord) -> Result<Command, ParserErr
 
     let link = record.get(1).unwrap().trim().to_string();
 
-    Ok(Command::GoogleFont { link })
+    Ok(Command::GoogleFont { _link: link })
 }
 
 fn parse_image_command(record: &StringRecord) -> Result<Command, ParserError> {
@@ -1195,7 +1195,7 @@ fn parse_font_stretch(value: &str) -> Result<FontStretch, ParserError> {
     }
 }
 
-fn parse_side(value: &str) -> Result<Side, ParserError> {
+fn _parse_side(value: &str) -> Result<Side, ParserError> {
     let value = value.trim(); // Trim the input
     match value.to_uppercase().as_str() {
         "LEFT" => Ok(Side::Left),

@@ -140,7 +140,7 @@ pub enum Command {
 
     // Draw Phase Commands
     GoogleFont {
-        link: String,
+        _link: String,
     },
     Image {
         name: String,

@@ -471,7 +471,7 @@ impl SvgRenderer {
 
             // Draw phase commands
             Command::Draw => Ok(()), // Already handled in process_commands
-            Command::GoogleFont { link } => {
+            Command::GoogleFont { _link } => {
                 // todo!("handle font implementation")
                 Ok(())
             }
@@ -1060,6 +1060,9 @@ impl SvgRenderer {
         let mut svg_content = String::new();
         file.read_to_string(&mut svg_content)?;
 
+        // Extract SVG dimensions from the content
+        let (svg_width, svg_height) = Self::extract_svg_dimensions(&svg_content)?;
+
         // Encode the SVG content as base64
         let encoded = general_purpose::STANDARD.encode(svg_content.as_bytes());
         let data_url = format!("data:image/svg+xml;base64,{}", encoded);
@@ -1067,12 +1070,12 @@ impl SvgRenderer {
         // Calculate position and dimensions
         let x = get_size(x, self.page_resolution.0 as f32, Some(0.0));
         let y = get_size(y, self.page_resolution.1 as f32, Some(0.0));
-        let w = get_size(w, 100.0, Some(100.0)); // Default width if not specified
-        let h = get_size(h, 100.0, Some(100.0)); // Default height if not specified
+        let w = get_size(w, svg_width, Some(100.0)); // Use SVG width as default if not specified
+        let h = get_size(h, svg_height, Some(100.0)); // Use SVG height as default if not specified
 
         // Adjust position to top-left corner for SVG image element
-        let x = x - (w / 2.0);
-        let y = y - (h / 2.0);
+        let x = x - (svg_width / 2.0);
+        let y = y - (svg_height / 2.0);
 
         // Create the image element
         let mut image = Image::new()
@@ -2248,6 +2251,74 @@ impl SvgRenderer {
             println!("  Theme not found!");
         }
         println!("=== END THEME ===\n");
+    }
+
+    /// Extract width and height from SVG content
+    fn extract_svg_dimensions(svg_content: &str) -> Result<(f32, f32), RenderError> {
+        // Look for the opening <svg> tag
+        let svg_tag_start = svg_content
+            .find("<svg")
+            .ok_or_else(|| RenderError::SvgError("No <svg> tag found".to_string()))?;
+
+        // Find the end of the opening tag
+        let svg_tag_end = svg_content[svg_tag_start..]
+            .find('>')
+            .ok_or_else(|| RenderError::SvgError("Invalid <svg> tag".to_string()))?;
+
+        let svg_tag = &svg_content[svg_tag_start..svg_tag_start + svg_tag_end];
+
+        // Try to extract width and height attributes
+        let width = Self::extract_dimension_attribute(svg_tag, "width")?;
+        let height = Self::extract_dimension_attribute(svg_tag, "height")?;
+
+        // If width/height not found, try to extract from viewBox
+        if width.is_none() || height.is_none() {
+            if let Some((vb_width, vb_height)) = Self::extract_viewbox_dimensions(svg_tag)? {
+                return Ok((width.unwrap_or(vb_width), height.unwrap_or(vb_height)));
+            }
+        }
+
+        Ok((width.unwrap_or(100.0), height.unwrap_or(100.0)))
+    }
+
+    /// Extract a dimension attribute (width or height) from SVG tag
+    fn extract_dimension_attribute(
+        svg_tag: &str,
+        attr_name: &str,
+    ) -> Result<Option<f32>, RenderError> {
+        let attr_pattern = format!("{}=\"", attr_name);
+        if let Some(start) = svg_tag.find(&attr_pattern) {
+            let value_start = start + attr_pattern.len();
+            if let Some(end) = svg_tag[value_start..].find('"') {
+                let value_str = &svg_tag[value_start..value_start + end];
+                // Remove units (px, pt, em, etc.) and parse
+                let numeric_str =
+                    value_str.trim_end_matches(|c: char| c.is_alphabetic() || c == '%');
+                if let Ok(value) = numeric_str.parse::<f32>() {
+                    return Ok(Some(value));
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    /// Extract dimensions from viewBox attribute
+    fn extract_viewbox_dimensions(svg_tag: &str) -> Result<Option<(f32, f32)>, RenderError> {
+        if let Some(start) = svg_tag.find("viewBox=\"") {
+            let value_start = start + 9; // len of "viewBox=\""
+            if let Some(end) = svg_tag[value_start..].find('"') {
+                let viewbox_str = &svg_tag[value_start..value_start + end];
+                let parts: Vec<&str> = viewbox_str.split_whitespace().collect();
+                if parts.len() == 4 {
+                    if let (Ok(width), Ok(height)) =
+                        (parts[2].parse::<f32>(), parts[3].parse::<f32>())
+                    {
+                        return Ok(Some((width, height)));
+                    }
+                }
+            }
+        }
+        Ok(None)
     }
 
     // Helper methods

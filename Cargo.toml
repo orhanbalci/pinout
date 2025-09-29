@@ -1,7 +1,16 @@
 [package]
 name = "pinout"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+authors = ["Orhan Balci <orhanbalci@gmail.com>"]
+description = "A Rust library and command-line tool for generating beautiful pinout diagrams in SVG format from CSV descriptions"
+license = "MIT"
+repository = "https://github.com/orhanbalci/pinout"
+homepage = "https://github.com/orhanbalci/pinout"
+documentation = "https://docs.rs/pinout"
+readme = "README.md"
+keywords = ["pinout", "svg", "diagram", "electronics", "microcontroller"]
+categories = ["command-line-utilities", "graphics", "visualization"]
 
 [dependencies]
 base64 = "0.22.1"

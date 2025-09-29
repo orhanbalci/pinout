@@ -1,0 +1,135 @@
+<svg height="210mm" viewBox="0 0 1753 1240" width="297mm" xmlns="http://www.w3.org/2000/svg">
+<circle cx="10" cy="112.5" fill="lightblue" fill-opacity="0.5" r="40" stroke="black" stroke-opacity="1" stroke-width="2"/>
+<g transform="translate(-40,112.5)">
+<rect fill="white" fill-opacity="50" height="0" rx="0" ry="0" stroke="black" stroke-opacity="1" stroke-width="1" width="0" x="0" y="0"/>
+<text fill="black" font-family="Arial" font-size="10" font-stretch="normal" font-style="normal" font-weight="normal" stroke="black" stroke-opacity="0" stroke-width="0" text-anchor="middle" x="0" y="3.3333333">
+
+Serial Receive
+</text>
+</g>
+<circle cx="10" cy="137.5" fill="lightblue" fill-opacity="0.5" r="40" stroke="black" stroke-opacity="1" stroke-width="2"/>
+<g transform="translate(-40,137.5)">
+<rect fill="white" fill-opacity="50" height="0" rx="0" ry="0" stroke="black" stroke-opacity="1" stroke-width="1" width="0" x="0" y="0"/>
+<text fill="black" font-family="Arial" font-size="10" font-stretch="normal" font-style="normal" font-weight="normal" stroke="black" stroke-opacity="0" stroke-width="0" text-anchor="middle" x="0" y="3.3333333">
+
+Serial Transmit
+</text>
+</g>
+<circle cx="10" cy="162.5" fill="lightblue" fill-opacity="0.5" r="40" stroke="black" stroke-opacity="1" stroke-width="2"/>
+<g transform="translate(-40,162.5)">
+<rect fill="white" fill-opacity="50" height="0" rx="0" ry="0" stroke="black" stroke-opacity="1" stroke-width="1" width="0" x="0" y="0"/>
+<text fill="black" font-family="Arial" font-size="10" font-stretch="normal" font-style="normal" font-weight="normal" stroke="black" stroke-opacity="0" stroke-width="0" text-anchor="middle" x="0" y="3.3333333">
+
+Digital I/O Pin
+</text>
+</g>
+<circle cx="10" cy="187.5" fill="lightblue" fill-opacity="0.5" r="40" stroke="black" stroke-opacity="1" stroke-width="2"/>
+<g transform="translate(-40,187.5)">
+<rect fill="white" fill-opacity="50" height="0" rx="0" ry="0" stroke="black" stroke-opacity="1" stroke-width="1" width="0" x="0" y="0"/>
+<text fill="black" font-family="Arial" font-size="10" font-stretch="normal" font-style="normal" font-weight="normal" stroke="black" stroke-opacity="0" stroke-width="0" text-anchor="middle" x="0" y="3.3333333">
+
+PWM Digital I/O Pin
+</text>
+</g>
+<circle cx="10" cy="212.5" fill="lightblue" fill-opacity="0.5" r="40" stroke="black" stroke-opacity="1" stroke-width="2"/>
+<g transform="translate(-40,212.5)">
+<rect fill="white" fill-opacity="50" height="0" rx="0" ry="0" stroke="black" stroke-opacity="1" stroke-width="1" width="0" x="0" y="0"/>
+<text fill="black" font-family="Arial" font-size="10" font-stretch="normal" font-style="normal" font-weight="normal" stroke="black" stroke-opacity="0" stroke-width="0" text-anchor="middle" x="0" y="3.3333333">
+
+Digital I/O Pin
+</text>
+</g>
+<circle cx="10" cy="237.5" fill="lightblue" fill-opacity="0.5" r="40" stroke="black" stroke-opacity="1" stroke-width="2"/>
+<g transform="translate(-40,237.5)">
+<rect fill="white" fill-opacity="50" height="0" rx="0" ry="0" stroke="black" stroke-opacity="1" stroke-width="1" width="0" x="0" y="0"/>
+<text fill="black" font-family="Arial" font-size="10" font-stretch="normal" font-style="normal" font-weight="normal" stroke="black" stroke-opacity="0" stroke-width="0" text-anchor="middle" x="0" y="3.3333333">
+
+PWM Digital I/O Pin
+</text>
+</g>
+<circle cx="10" cy="262.5" fill="lightblue" fill-opacity="0.5" r="40" stroke="black" stroke-opacity="1" stroke-width="2"/>
+<g transform="translate(-40,262.5)">
+<rect fill="white" fill-opacity="50" height="0" rx="0" ry="0" stroke="black" stroke-opacity="1" stroke-width="1" width="0" x="0" y="0"/>
+<text fill="black" font-family="Arial" font-size="10" font-stretch="normal" font-style="normal" font-weight="normal" stroke="black" stroke-opacity="0" stroke-width="0" text-anchor="middle" x="0" y="3.3333333">
+
+PWM Digital I/O Pin
+</text>
+</g>
+<circle cx="10" cy="287.5" fill="lightblue" fill-opacity="0.5" r="40" stroke="black" stroke-opacity="1" stroke-width="2"/>
+<g transform="translate(-40,287.5)">
+<rect fill="white" fill-opacity="50" height="0" rx="0" ry="0" stroke="black" stroke-opacity="1" stroke-width="1" width="0" x="0" y="0"/>
+<text fill="black" font-family="Arial" font-size="10" font-stretch="normal" font-style="normal" font-weight="normal" stroke="black" stroke-opacity="0" stroke-width="0" text-anchor="middle" x="0" y="3.3333333">
+
+Digital I/O Pin
+</text>
+</g>
+<circle cx="440" cy="112.5" fill="lightgreen" fill-opacity="0.5" r="40" stroke="black" stroke-opacity="1" stroke-width="2"/>
+<g transform="translate(490,112.5)">
+<rect fill="white" fill-opacity="50" height="0" rx="0" ry="0" stroke="black" stroke-opacity="1" stroke-width="1" width="0" x="0" y="0"/>
+<text fill="black" font-family="Arial" font-size="10" font-stretch="normal" font-style="normal" font-weight="normal" stroke="black" stroke-opacity="0" stroke-width="0" text-anchor="middle" x="0" y="3.3333333">
+
+Analog Input Pin
+</text>
+</g>
+<circle cx="440" cy="137.5" fill="lightgreen" fill-opacity="0.5" r="40" stroke="black" stroke-opacity="1" stroke-width="2"/>
+<g transform="translate(490,137.5)">
+<rect fill="white" fill-opacity="50" height="0" rx="0" ry="0" stroke="black" stroke-opacity="1" stroke-width="1" width="0" x="0" y="0"/>
+<text fill="black" font-family="Arial" font-size="10" font-stretch="normal" font-style="normal" font-weight="normal" stroke="black" stroke-opacity="0" stroke-width="0" text-anchor="middle" x="0" y="3.3333333">
+
+Analog Input Pin
+</text>
+</g>
+<circle cx="440" cy="162.5" fill="lightgreen" fill-opacity="0.5" r="40" stroke="black" stroke-opacity="1" stroke-width="2"/>
+<g transform="translate(490,162.5)">
+<rect fill="white" fill-opacity="50" height="0" rx="0" ry="0" stroke="black" stroke-opacity="1" stroke-width="1" width="0" x="0" y="0"/>
+<text fill="black" font-family="Arial" font-size="10" font-stretch="normal" font-style="normal" font-weight="normal" stroke="black" stroke-opacity="0" stroke-width="0" text-anchor="middle" x="0" y="3.3333333">
+
+Analog Input Pin
+</text>
+</g>
+<circle cx="440" cy="187.5" fill="lightgreen" fill-opacity="0.5" r="40" stroke="black" stroke-opacity="1" stroke-width="2"/>
+<g transform="translate(490,187.5)">
+<rect fill="white" fill-opacity="50" height="0" rx="0" ry="0" stroke="black" stroke-opacity="1" stroke-width="1" width="0" x="0" y="0"/>
+<text fill="black" font-family="Arial" font-size="10" font-stretch="normal" font-style="normal" font-weight="normal" stroke="black" stroke-opacity="0" stroke-width="0" text-anchor="middle" x="0" y="3.3333333">
+
+Analog Input Pin
+</text>
+</g>
+<circle cx="440" cy="212.5" fill="lightgreen" fill-opacity="0.5" r="40" stroke="black" stroke-opacity="1" stroke-width="2"/>
+<g transform="translate(490,212.5)">
+<rect fill="white" fill-opacity="50" height="0" rx="0" ry="0" stroke="black" stroke-opacity="1" stroke-width="1" width="0" x="0" y="0"/>
+<text fill="black" font-family="Arial" font-size="10" font-stretch="normal" font-style="normal" font-weight="normal" stroke="black" stroke-opacity="0" stroke-width="0" text-anchor="middle" x="0" y="3.3333333">
+
+Analog Input Pin (SDA)
+</text>
+</g>
+<circle cx="440" cy="237.5" fill="lightgreen" fill-opacity="0.5" r="40" stroke="black" stroke-opacity="1" stroke-width="2"/>
+<g transform="translate(490,237.5)">
+<rect fill="white" fill-opacity="50" height="0" rx="0" ry="0" stroke="black" stroke-opacity="1" stroke-width="1" width="0" x="0" y="0"/>
+<text fill="black" font-family="Arial" font-size="10" font-stretch="normal" font-style="normal" font-weight="normal" stroke="black" stroke-opacity="0" stroke-width="0" text-anchor="middle" x="0" y="3.3333333">
+
+Analog Input Pin (SCL)
+</text>
+</g>
+<circle cx="440" cy="262.5" fill="lightyellow" fill-opacity="0.5" r="40" stroke="black" stroke-opacity="1" stroke-width="2"/>
+<g transform="translate(490,262.5)">
+<rect fill="white" fill-opacity="50" height="0" rx="0" ry="0" stroke="black" stroke-opacity="1" stroke-width="1" width="0" x="0" y="0"/>
+<text fill="black" font-family="Arial" font-size="10" font-stretch="normal" font-style="normal" font-weight="normal" stroke="black" stroke-opacity="0" stroke-width="0" text-anchor="middle" x="0" y="3.3333333">
+
+Power Supply
+</text>
+</g>
+<circle cx="440" cy="287.5" fill="lightyellow" fill-opacity="0.5" r="40" stroke="black" stroke-opacity="1" stroke-width="2"/>
+<g transform="translate(490,287.5)">
+<rect fill="white" fill-opacity="50" height="0" rx="0" ry="0" stroke="black" stroke-opacity="1" stroke-width="1" width="0" x="0" y="0"/>
+<text fill="black" font-family="Arial" font-size="10" font-stretch="normal" font-style="normal" font-weight="normal" stroke="black" stroke-opacity="0" stroke-width="0" text-anchor="middle" x="0" y="3.3333333">
+
+Ground Connection
+</text>
+</g>
+<text fill="black" font-family="Arial" font-size="16" font-stretch="normal" font-style="normal" font-weight="normal" stroke="none" text-anchor="middle" x="225" y="50">
+
+<tspan fill="black" stroke="none">Arduino Uno Pinout</tspan>
+</text>
+<defs/>
+</svg>

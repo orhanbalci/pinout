@@ -182,12 +182,6 @@ PIN,2,GND,Output,,Ground
 
 The repository includes example CSV files demonstrating different features:
 
-### Simple Arduino Example
-See `examples/arduino_uno.csv` for a basic example showing:
-- Simple pin labeling with digital and analog pins
-- Basic color theming for different pin types
-- Clean layout with left and right pin groups
-
 ### ESP32 Development Board
 See `ESP32-MAXIO.csv` for a complete example showing:
 - Complex pin labeling with multiple functions per pin
@@ -242,25 +236,6 @@ The library provides comprehensive error handling:
 - Phase validation - Ensures commands are used in correct phase
 - Resource validation - Checks for missing images and fonts
 
-## Troubleshooting
-
-### Common Issues
-
-**"Invalid pin type" error**: Make sure you're using valid pin types (`IO`, `Input`, `Output`), not custom names.
-
-**"PinGroup X is not defined" error**: Define all groups used in PIN commands with the `GROUP` command first.
-
-**"Image file not found" error**: Ensure image paths are correct and files exist. Use the `resources/` directory for storing images.
-
-**"Invalid phase" error**: Make sure all setup commands (LABELS, BORDER COLOR, etc.) come before the `DRAW` command, and all drawing commands (PIN, PINSET, etc.) come after.
-
-### Command Format Tips
-
-- Use `PINSET` not `PIN SET` (no space)
-- Use `PINTEXT` not `PIN TEXT` (no space)  
-- Pin types are case-sensitive: use `IO`, `Input`, `Output` exactly
-- Boolean values in PINSET use `PACKED` or `SPACED` not `true`/`false`
-
 ## Contributing
 
 1. Fork the repository
@@ -272,26 +247,9 @@ The library provides comprehensive error handling:
 7. Push to branch (`git push origin feature/amazing-feature`)
 8. Open a Pull Request
 
-## Development
-
-### Building
-```bash
-cargo build
-```
-
-### Running Tests
-```bash
-cargo test
-```
-
-### Generating Documentation
-```bash
-cargo doc --open
-```
-
 ## License
 
-This project does not currently specify a license. Please check with the project maintainer for licensing information before use in commercial or open source projects.
+This project is licensed under the MIT License.
 
 ## Acknowledgments
 

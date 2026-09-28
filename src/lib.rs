@@ -4,6 +4,7 @@ pub use parser::csv;
 pub use parser::document;
 pub use parser::types;
 pub use renderer::svg;
+pub use renderer::term;
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right

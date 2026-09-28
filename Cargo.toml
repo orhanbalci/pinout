@@ -1,6 +1,6 @@
 [package]
 name = "pinout"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Orhan Balci <orhanbalci@gmail.com>"]
 description = "A Rust library and command-line tool for generating pinout diagrams as SVG or terminal output from pinoutleaf-style YAML descriptions"
@@ -9,7 +9,7 @@ repository = "https://github.com/orhanbalci/pinout"
 homepage = "https://github.com/orhanbalci/pinout"
 documentation = "https://docs.rs/pinout"
 readme = "README.md"
-exclude = ["assets/", "scripts/"]
+exclude = ["assets/", "scripts/", "resources/"]
 keywords = ["pinout", "svg", "diagram", "electronics", "microcontroller"]
 categories = ["command-line-utilities", "graphics", "visualization"]
 
@@ -23,10 +23,25 @@ serde_yaml_ng = "0.10.0"
 svg = "0.18.0"
 thiserror = "2.0.12"
 
-[dev-dependencies]
-clap = "4.5.42"
-crossterm = "0.29"
-edtui = "0.11.7"
-ratatui = "0.30"
-terminal_size = "0.4.4"
+# Command line tool and terminal UI
+clap = { version = "4.5.42", optional = true }
+crossterm = { version = "0.29", optional = true }
+edtui = { version = "0.11.7", optional = true }
+ratatui = { version = "0.30", optional = true }
+terminal_size = { version = "0.4.4", optional = true }
+
+[features]
+default = ["cli"]
+# The `pinout` binary. Library users can leave it out with
+# `default-features = false`.
+cli = ["dep:clap", "dep:crossterm", "dep:edtui", "dep:ratatui", "dep:terminal_size"]
+
+[[bin]]
+name = "pinout"
+path = "src/bin/pinout/main.rs"
+required-features = ["cli"]
+
+[[example]]
+name = "main"
+required-features = ["cli"]
 

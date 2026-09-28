@@ -9,7 +9,7 @@ are described in the YAML format of [pinoutleaf](https://github.com/splitbrain/p
 and drawn as true-to-scale SVG, as colored terminal output, or edited live in
 an interactive terminal UI.
 
-![front view](https://raw.githubusercontent.com/orhanbalci/pinout/master/assets/tui/front.png)
+![front view](https://raw.githubusercontent.com/orhanbalci/pinout/v0.2.0/assets/tui/front.png)
 
 ## ✨ Features
 
@@ -21,17 +21,17 @@ an interactive terminal UI.
 
 ## 📦 Installation
 
+The `pinout` command line tool and terminal UI:
+
 ```bash
-git clone https://github.com/orhanbalci/pinout
-cd pinout
-cargo build --release
+cargo install pinout
 ```
 
-As a library:
+The library, without the dependencies of the command line tool:
 
 ```toml
 [dependencies]
-pinout = "0.1"
+pinout = { version = "0.2", default-features = false }
 ```
 
 ## 🚀 Quick Start
@@ -66,10 +66,10 @@ Then look at it in the terminal, edit it interactively, or write the SVG for
 the front and the back:
 
 ```bash
-cargo run --example pinout -- my_board.yaml
-cargo run --example pinout -- my_board.yaml --tui
-cargo run --example pinout -- my_board.yaml -o my_board.svg
-cargo run --example pinout -- my_board.yaml --back -o my_board.back.svg
+pinout my_board.yaml
+pinout my_board.yaml --tui
+pinout my_board.yaml -o my_board.svg
+pinout my_board.yaml --back -o my_board.back.svg
 ```
 
 ## 🖥️ Interactive Editor
@@ -79,11 +79,11 @@ cargo run --example pinout -- my_board.yaml --back -o my_board.back.svg
 Every edit is parsed right away; while the text has errors the other tabs keep
 the last valid version and the status line shows what is wrong.
 
-![editor](https://raw.githubusercontent.com/orhanbalci/pinout/master/assets/tui/editor.png)
+![editor](https://raw.githubusercontent.com/orhanbalci/pinout/v0.2.0/assets/tui/editor.png)
 
-![pins](https://raw.githubusercontent.com/orhanbalci/pinout/master/assets/tui/pins.png)
+![pins](https://raw.githubusercontent.com/orhanbalci/pinout/v0.2.0/assets/tui/pins.png)
 
-![columns](https://raw.githubusercontent.com/orhanbalci/pinout/master/assets/tui/columns.png)
+![columns](https://raw.githubusercontent.com/orhanbalci/pinout/v0.2.0/assets/tui/columns.png)
 
 | Tab | Keys |
 | --- | --- |
@@ -98,7 +98,7 @@ more when there are unsaved changes.
 ## 🔧 Command Line
 
 ```bash
-cargo run --example pinout -- <input> [options]
+pinout <input> [options]
 ```
 
 The input is a `.yaml`, `.yml` or `.json` board description, or a legacy `.csv`
@@ -182,7 +182,7 @@ renders them with the original SVG renderer, and the `pinout` tool converts them
 to YAML:
 
 ```bash
-cargo run --example pinout -- ESP32-MAXIO.csv -o ESP32-MAXIO.yaml
+pinout ESP32-MAXIO.csv -o ESP32-MAXIO.yaml
 ```
 
 The conversion takes the main left and right pin sets as the board, guesses

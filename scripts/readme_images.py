@@ -5,7 +5,7 @@ The screens come from an ignored test that renders the TUI into a test
 backend and writes each screen as ANSI text:
 
     PINOUT_README_SCREENS=target/readme-screens \\
-        cargo test --example pinout readme_screens -- --ignored
+        cargo test --bin pinout readme_screens -- --ignored
     python3 scripts/readme_images.py target/readme-screens assets/tui
 
 Every image follows the framed layout of the author's other projects: a

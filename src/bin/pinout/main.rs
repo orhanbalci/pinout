@@ -10,7 +10,7 @@ mod tui;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let matches = Command::new("pinout")
-        .version("1.0")
+        .version(env!("CARGO_PKG_VERSION"))
         .about("Renders pinout diagrams from YAML or JSON board descriptions")
         .arg(
             Arg::new("input")

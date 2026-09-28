@@ -1,3 +1,3 @@
+pub mod leaf;
 pub mod svg;
 pub mod term;
-pub mod leaf;

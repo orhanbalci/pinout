@@ -1019,6 +1019,42 @@ mod tests {
             .unwrap();
     }
 
+    /// Writes the screens shown in the README as ANSI text to the directory
+    /// in $PINOUT_README_SCREENS; `scripts/readme_images.py` frames them.
+    #[test]
+    #[ignore = "writes the README screens, run with --ignored"]
+    fn readme_screens() {
+        let dir = PathBuf::from(
+            std::env::var("PINOUT_README_SCREENS").expect("set PINOUT_README_SCREENS"),
+        );
+        std::fs::create_dir_all(&dir).unwrap();
+        let save = |app: &mut App, name: &str, width: u16, height: u16| {
+            let path = dir.join(format!("{name}.ansi"));
+            let _ = std::fs::remove_file(&path);
+            std::env::set_var("PINOUT_TUI_DUMP", &path);
+            screen(app, width, height);
+            std::env::remove_var("PINOUT_TUI_DUMP");
+        };
+
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("ATtiny85.yaml");
+        let mut app = App::open(&path).unwrap();
+        save(&mut app, "front", 180, 17);
+
+        app.handle(key(KeyCode::Char('v'))).unwrap();
+        typed(&mut app, "jjj jjj ");
+        save(&mut app, "columns", 180, 19);
+        app.handle(key(KeyCode::Char('a'))).unwrap();
+        app.handle(key(KeyCode::Esc)).unwrap();
+
+        app.handle(key(KeyCode::F(4))).unwrap();
+        typed(&mut app, "jjjjjj");
+        save(&mut app, "pins", 136, 20);
+
+        app.handle(key(KeyCode::F(1))).unwrap();
+        typed(&mut app, "11G");
+        save(&mut app, "editor", 120, 22);
+    }
+
     const BOARD: &str = "title: Demo\npins:\n  left:\n    - [ \"GPIO1:gpio\", \"SDA:i2c\" ]\n  right:\n    - [ \"GND:gnd\" ]\nnotes:\n  - title: Features\n    lines: [ \"WiFi\" ]\n";
 
     #[test]

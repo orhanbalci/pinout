@@ -9,6 +9,7 @@ repository = "https://github.com/orhanbalci/pinout"
 homepage = "https://github.com/orhanbalci/pinout"
 documentation = "https://docs.rs/pinout"
 readme = "README.md"
+exclude = ["assets/", "scripts/"]
 keywords = ["pinout", "svg", "diagram", "electronics", "microcontroller"]
 categories = ["command-line-utilities", "graphics", "visualization"]
 

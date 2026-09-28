@@ -1,35 +1,45 @@
-//! Terminal renderer: draws pinout diagrams as ANSI-colored text.
+//! Terminal renderer for the [`Pinout`] model: draws the board as
+//! ANSI-colored text.
 //!
-//! The layout follows pinoutleaf: every pin function is a colored chip whose
-//! background depends on what the function is (GPIO, analog, SPI, I2C, ...),
-//! chips line up next to a board with one pad per pin, and a legend explains
-//! the colors. Absolute coordinates, images and icons are ignored.
+//! The layout follows pinoutleaf: every label is a chip in the colors of its
+//! type, chips line up next to a board with one pad per pin, and a legend
+//! explains the colors. Top and bottom rows stack their chips vertically.
 
-use crate::parser::types::{Command, Side};
-use crate::renderer::svg::RenderError;
+use crate::model::{is_builtin_type, Edge, Label, Pinout, PinoutError, ResolvedType};
 
 #[derive(Debug, Clone)]
 pub struct TermOptions {
     /// Emit ANSI truecolor escape codes.
     pub color: bool,
-    /// Only show these label columns (matched case-insensitively).
-    pub labels: Option<Vec<String>>,
-    /// Available width; boards wider than this are split up.
+    /// Available width; labels are shortened until the diagram fits.
     pub max_width: Option<usize>,
-    /// Board title. Defaults to the first message of the document.
-    pub title: Option<String>,
     /// Put pins on consecutive lines instead of leaving a gap between them.
     pub compact: bool,
+    /// Draw the back of the board instead of the front.
+    pub back: bool,
+    /// Only show labels of these types.
+    pub types: Option<Vec<String>>,
+    /// Print the board's notes below the diagram.
+    pub notes: bool,
+    /// Flow the labels of each pin next to each other instead of aligning
+    /// them in columns.
+    pub packed: bool,
+    /// Shorten labels longer than this. Labels are also shortened as far as
+    /// needed to fit `max_width`, down to a few characters.
+    pub max_label: Option<usize>,
 }
 
 impl Default for TermOptions {
     fn default() -> Self {
         Self {
             color: true,
-            labels: None,
             max_width: None,
-            title: None,
             compact: false,
+            back: false,
+            types: None,
+            notes: false,
+            packed: false,
+            max_label: None,
         }
     }
 }
@@ -50,9 +60,9 @@ struct Style {
 }
 
 impl Style {
-    fn fg(color: Option<Rgb>) -> Self {
+    fn fg(color: Rgb) -> Self {
         Self {
-            fg: color,
+            fg: Some(color),
             ..Self::default()
         }
     }
@@ -72,10 +82,13 @@ impl Style {
         }
     }
 
-    fn chip(background: Rgb) -> Self {
+    /// Colors of a type; unreadable color values fall back to black with
+    /// contrasting text.
+    fn chip(kind: &ResolvedType) -> Self {
+        let bg = parse_color(&kind.bgcolor).unwrap_or(Rgb(0, 0, 0));
         Self {
-            fg: Some(contrast(background)),
-            bg: Some(background),
+            fg: Some(parse_color(&kind.fgcolor).unwrap_or_else(|| contrast(bg))),
+            bg: Some(bg),
             bold: true,
         }
     }
@@ -161,579 +174,377 @@ fn width(lines: &[Line]) -> usize {
     lines.iter().map(|l| l.width).max().unwrap_or(0)
 }
 
-/// What a pin function is used for; decides the chip color.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Category {
-    Pin,
-    Gpio,
-    Analog,
-    Touch,
-    Rtc,
-    Power,
-    Ground,
-    Control,
-    I2c,
-    Spi,
-    Uart,
-    Serial,
-    Pwm,
-    Interrupt,
-    SdCard,
-    Ethernet,
-    Clock,
-    Debug,
-    Logic,
-    Other,
-}
-
-impl Category {
-    fn name(self) -> &'static str {
-        match self {
-            Category::Pin => "Pin",
-            Category::Gpio => "GPIO",
-            Category::Analog => "Analog",
-            Category::Touch => "Touch",
-            Category::Rtc => "RTC",
-            Category::Power => "Power",
-            Category::Ground => "Ground",
-            Category::Control => "Control",
-            Category::I2c => "I2C",
-            Category::Spi => "SPI",
-            Category::Uart => "UART",
-            Category::Serial => "Serial (SERCOM)",
-            Category::Pwm => "PWM / Timer",
-            Category::Interrupt => "Interrupt",
-            Category::SdCard => "SD Card",
-            Category::Ethernet => "Ethernet",
-            Category::Clock => "Clock",
-            Category::Debug => "Debug",
-            Category::Logic => "Custom Logic",
-            Category::Other => "Other",
-        }
-    }
-
-    fn color(self) -> Rgb {
-        match self {
-            Category::Pin => Rgb(236, 239, 241),
-            Category::Gpio => Rgb(124, 179, 66),
-            Category::Analog => Rgb(239, 124, 0),
-            Category::Touch => Rgb(236, 64, 122),
-            Category::Rtc => Rgb(161, 136, 127),
-            Category::Power => Rgb(211, 47, 47),
-            Category::Ground => Rgb(66, 66, 66),
-            Category::Control => Rgb(255, 179, 0),
-            Category::I2c => Rgb(38, 166, 154),
-            Category::Spi => Rgb(123, 97, 255),
-            Category::Uart => Rgb(84, 110, 122),
-            Category::Serial => Rgb(171, 71, 188),
-            Category::Pwm => Rgb(253, 216, 53),
-            Category::Interrupt => Rgb(0, 172, 193),
-            Category::SdCard => Rgb(57, 73, 171),
-            Category::Ethernet => Rgb(30, 136, 229),
-            Category::Clock => Rgb(192, 202, 51),
-            Category::Debug => Rgb(78, 52, 46),
-            Category::Logic => Rgb(130, 119, 23),
-            Category::Other => Rgb(158, 158, 158),
-        }
-    }
-
-    /// Guess the category from the function name. The CSV format has no
-    /// per-cell type, so this relies on common datasheet naming.
-    fn classify(text: &str, column: usize) -> Category {
-        let upper = text.to_ascii_uppercase();
-        let token = upper.split_whitespace().next().unwrap_or("");
-        // "ADC1:0" -> "ADC1", "HSPI:CLK" -> "HSPI"
-        let head = token.split(':').next().unwrap_or("");
-        // "GPIO21" -> "GPIO", "E14*" -> "E"
-        let alpha = head.trim_end_matches(|c: char| c.is_ascii_digit() || c == '*');
-        let numbered = alpha.len() < head.len();
-        let is = |names: &[&str], value: &str| names.contains(&value);
-
-        if is(&["GND", "VSS", "GROUND"], token) {
-            Category::Ground
-        } else if is(
-            &["VCC", "VBUS", "VIN", "VDD", "VBAT", "BAT", "BAT+", "BAT-"],
-            token,
-        ) || (token.starts_with(|c: char| c.is_ascii_digit()) && token.contains('V'))
-        {
-            Category::Power
-        } else if is(&["RST", "RESET", "NRST", "EN", "BOOT", "CHIP_PU"], token) {
-            Category::Control
-        } else if is(&["SDA", "SCL"], token) || alpha == "I2C" {
-            Category::I2c
-        } else if is(&["TX", "RX", "TXD", "RXD", "UART"], alpha)
-            || (head.starts_with('U')
-                && ["TXD", "RXD", "CTS", "RTS"]
-                    .iter()
-                    .any(|s| head.ends_with(s)))
-        {
-            Category::Uart
-        } else if is(&["MISO", "MOSI", "SCK", "SCLK", "SS", "CS"], alpha)
-            || ["HSPI", "VSPI", "FSPI", "SPI"]
-                .iter()
-                .any(|p| head.starts_with(p))
-        {
-            Category::Spi
-        } else if head == "SD" || alpha == "SDIO" {
-            Category::SdCard
-        } else if alpha == "EMAC" {
-            Category::Ethernet
-        } else if is(&["SCOM", "SERCOM"], alpha) {
-            Category::Serial
-        } else if is(&["TC", "TCC", "PWM", "LEDC"], alpha) {
-            Category::Pwm
-        } else if is(&["EXTINT", "EINT", "INT"], alpha) {
-            Category::Interrupt
-        } else if alpha == "TOUCH" || (is(&["X", "Y"], alpha) && token.contains(':')) {
-            Category::Touch
-        } else if alpha == "RTC" {
-            Category::Rtc
-        } else if is(
-            &[
-                "ADC", "AIN", "DAC", "AC", "OA", "VREF", "VREFB", "SENSOR", "VDET",
-            ],
-            alpha,
-        ) || (alpha == "A" && numbered)
-        {
-            Category::Analog
-        } else if is(&["CLK", "XIN", "XOUT", "XTAL", "OSC", "32K"], alpha) {
-            Category::Clock
-        } else if is(
-            &[
-                "MTMS", "MTDI", "MTCK", "MTDO", "SWDIO", "SWCLK", "SWO", "TMS", "TDI", "TDO", "TCK",
-            ],
-            token,
-        ) {
-            Category::Debug
-        } else if alpha == "CCL" {
-            Category::Logic
-        } else if (is(&["GPIO", "IO", "D"], alpha) && numbered)
-            || (alpha.len() == 2 && alpha.starts_with('P') && numbered)
-        {
-            Category::Gpio
-        } else if column == 0 {
-            Category::Pin
-        } else {
-            Category::Other
-        }
-    }
-}
-
-struct PinSet {
-    side: Side,
-    packed: bool,
-    anchor: (f32, f32),
-    heading: Option<String>,
-    rows: Vec<Row>,
-}
-
-struct Row {
-    group: Option<String>,
-    cells: Vec<String>,
-    /// Free text of a PINTEXT, printed after the cells.
-    message: Option<String>,
-}
-
-struct Note {
-    heading: Option<String>,
-    lines: Vec<(String, Option<Rgb>)>,
-}
-
-enum Block {
-    Pins(PinSet),
-    Note(Note),
-}
-
-/// A titled box from the draw phase, used as heading for the first pin set or
-/// message placed inside it.
-struct HeadingBox {
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
-    title: String,
-}
-
-impl HeadingBox {
-    fn contains(&self, x: f32, y: f32) -> bool {
-        // Justification is not tracked, so accept the box extending either way
-        (self.x - self.w..=self.x + self.w).contains(&x) && (self.y..=self.y + self.h).contains(&y)
-    }
-}
-
-fn take_heading(boxes: &mut Vec<HeadingBox>, x: f32, y: f32) -> Option<String> {
-    let index = boxes.iter().position(|b| b.contains(x, y))?;
-    Some(boxes.remove(index).title)
-}
-
-struct Document {
-    labels: Vec<String>,
-    groups: Vec<(String, Option<Rgb>)>,
-    blocks: Vec<Block>,
-}
-
-impl Document {
-    fn group_color(&self, group: Option<&str>) -> Option<Rgb> {
-        let group = group?;
-        self.groups
-            .iter()
-            .find(|(name, _)| name == group)
-            .and_then(|(_, color)| *color)
-    }
-}
-
-/// Render the commands of a pinout description as terminal text.
-pub fn render_terminal(commands: &[Command], options: &TermOptions) -> Result<String, RenderError> {
-    let mut document = collect(commands)?;
-
-    if let Some(filter) = &options.labels {
+/// Render the front (or back) of a board as terminal text.
+pub fn render_terminal(pinout: &Pinout, options: &TermOptions) -> Result<String, PinoutError> {
+    if let Some(filter) = &options.types {
         for wanted in filter {
-            if !document
-                .labels
-                .iter()
-                .any(|l| l.eq_ignore_ascii_case(wanted))
-            {
-                return Err(RenderError::MissingData(format!(
-                    "Unknown label '{}', available labels: {}",
-                    wanted,
-                    document.labels.join(", ")
+            if !is_builtin_type(wanted) && !pinout.types.contains_key(wanted) {
+                let used: Vec<String> = pinout.used_types().into_iter().map(|t| t.name).collect();
+                return Err(PinoutError::Invalid(format!(
+                    "unknown type '{wanted}', the board uses: {}",
+                    used.join(", ")
                 )));
             }
         }
     }
 
-    // A leading message before any pins is the document title
-    let mut title = options.title.clone();
-    if let Some(Block::Note(note)) = document.blocks.first() {
-        if title.is_none() {
-            title = note
-                .lines
-                .iter()
-                .map(|(t, _)| t.clone())
-                .find(|t| !t.is_empty());
-        }
-        if note.lines.len() == 1 {
-            document.blocks.remove(0);
-        }
-    }
+    let pinout = if options.back {
+        pinout.flipped()
+    } else {
+        pinout.clone()
+    };
+    let mut cells = Cells {
+        pinout: &pinout,
+        types: options.types.as_deref(),
+        max_label: options.max_label,
+    };
 
-    // Frame borders and padding take this many columns around a section
+    // Frame borders and padding take this many columns around the content
     const FRAME_WIDTH: usize = 6;
     let content_width = options.max_width.map(|w| w.saturating_sub(FRAME_WIDTH));
+    let used = cells.used_types();
+    let mut content = layout(&cells, &used, options);
 
-    let mut categories = Vec::new();
-    let mut sections: Vec<(Option<String>, Vec<Line>)> = Vec::new();
-    let mut notes: Vec<(usize, &Note)> = Vec::new();
-    let mut board_title = title.clone();
-
-    let mut blocks = document.blocks.iter().peekable();
-    while let Some(block) = blocks.next() {
-        let first = match block {
-            Block::Note(note) => {
-                notes.push((sections.len(), note));
-                continue;
-            }
-            Block::Pins(set) => set,
-        };
-        let second = match blocks.peek() {
-            Some(Block::Pins(second)) if is_pair(first, second) => {
-                blocks.next();
-                Some(second)
-            }
-            _ => None,
-        };
-
-        let heading = first.heading.clone().or_else(|| board_title.clone());
-        let label = board_title.take().unwrap_or_default();
-        let a = SideBlock::new(&document, first, options, &mut categories);
-        let b = second.map(|s| SideBlock::new(&document, s, options, &mut categories));
-        let (left, right) = match b {
-            Some(b) if first.side == Side::Left => (Some(a), Some(b)),
-            Some(b) => (Some(b), Some(a)),
-            None if a.left => (Some(a), None),
-            None => (None, Some(a)),
-        };
-
-        let lines = render_board(left.as_ref(), right.as_ref(), &label, options.compact);
-        if left.is_some() && right.is_some() && content_width.is_some_and(|w| width(&lines) > w) {
-            // Too wide side by side: give each half its own board
-            let lines = render_board(left.as_ref(), None, &label, options.compact);
-            sections.push((heading, lines));
-            let lines = render_board(None, right.as_ref(), "", options.compact);
-            sections.push((None, lines));
-        } else {
-            sections.push((heading, lines));
+    // Shorten long labels step by step until the diagram fits
+    if let Some(max) = content_width {
+        let longest = cells.longest_label();
+        let mut limit = cells.max_label.unwrap_or(longest).min(longest);
+        while width(&content) > max && limit > MIN_LABEL {
+            limit -= 1;
+            cells.max_label = Some(limit);
+            content = layout(&cells, &used, options);
         }
     }
 
-    categories.sort_by_key(|c| c.name());
-    if let Some((_, lines)) = sections.first_mut() {
-        let with_legend = beside(lines.clone(), legend_box(&categories), 4);
-        *lines = if content_width.is_some_and(|w| width(&with_legend) > w) {
-            let mut below = lines.clone();
-            below.push(Line::default());
-            below.extend(legend_inline(
-                &categories,
-                content_width.unwrap_or(usize::MAX),
-            ));
-            below
-        } else {
-            with_legend
-        };
-    }
-
+    let title = if options.back {
+        format!("{} (back)", pinout.title)
+    } else {
+        pinout.title.clone()
+    };
     let mut out = String::new();
-    if sections.is_empty() {
-        if let Some(title) = &title {
-            let mut line = Line::default();
-            line.push(title.clone(), Style::bold());
-            line.write(&mut out, options.color);
+    let title = Some(title.as_str()).filter(|t| !t.is_empty());
+    for line in frame(title, content) {
+        line.write(&mut out, options.color);
+    }
+    if options.notes {
+        for note in &pinout.notes {
+            out.push('\n');
+            if let Some(title) = &note.title {
+                let mut line = Line::default();
+                line.push(title.clone(), Style::bold());
+                line.write(&mut out, options.color);
+            }
+            for text in &note.lines {
+                let mut line = Line::default();
+                line.push(text.clone(), Style::default());
+                line.write(&mut out, options.color);
+            }
         }
     }
-    let mut notes = notes.into_iter().peekable();
-    for (index, (heading, lines)) in sections.into_iter().enumerate() {
-        while let Some((_, note)) = notes.next_if(|(at, _)| *at <= index) {
-            render_note(note, &mut out, options.color);
-        }
-        for line in frame(heading.as_deref(), lines) {
-            line.write(&mut out, options.color);
-        }
-        out.push('\n');
-    }
-    for (_, note) in notes {
-        render_note(note, &mut out, options.color);
-    }
-
     Ok(out)
 }
 
-fn collect(commands: &[Command]) -> Result<Document, RenderError> {
-    let mut document = Document {
-        labels: Vec::new(),
-        groups: Vec::new(),
-        blocks: Vec::new(),
-    };
-    let mut boxes = Vec::new();
-    let mut anchor = (0.0, 0.0);
+/// Labels are never shortened below this many characters.
+const MIN_LABEL: usize = 4;
 
-    for command in commands {
-        match command {
-            Command::Labels { labels, .. } => {
-                document.labels = labels.iter().map(|l| l.trim().to_string()).collect();
-            }
-            Command::Group {
-                name,
-                color,
-                opacity,
-            } => {
-                let color = (*opacity > 0.0).then(|| parse_color(color)).flatten();
-                document.groups.push((name.trim().to_string(), color));
-            }
-            Command::Box {
-                x,
-                y,
-                box_width: Some(w),
-                box_height: Some(h),
-                message: Some(message),
-                ..
-            } if !clean(message).is_empty() => boxes.push(HeadingBox {
-                x: *x,
-                y: *y,
-                w: *w,
-                h: *h,
-                title: clean(message),
-            }),
-            Command::Anchor { x, y } => anchor = (*x, *y),
-            Command::PinSet { side, packed, .. } => document.blocks.push(Block::Pins(PinSet {
-                side: *side,
-                packed: *packed,
-                anchor,
-                heading: take_heading(&mut boxes, anchor.0, anchor.1),
-                rows: Vec::new(),
-            })),
-            Command::Pin {
-                group, attributes, ..
-            } => current_pin_set(&mut document.blocks)?.rows.push(Row {
-                group: group.as_deref().map(str::trim).map(String::from),
-                cells: attributes.iter().map(|a| clean(a)).collect(),
-                message: None,
-            }),
-            Command::PinText {
-                pin_group,
-                label,
-                message,
-                ..
-            } => current_pin_set(&mut document.blocks)?.rows.push(Row {
-                group: pin_group.as_deref().map(str::trim).map(String::from),
-                cells: label.as_deref().map(clean).into_iter().collect(),
-                message: Some(clean(message)).filter(|m| !m.is_empty()),
-            }),
-            Command::Message { x, y, .. } => document.blocks.push(Block::Note(Note {
-                heading: take_heading(&mut boxes, x.unwrap_or(0.0), y.unwrap_or(0.0)),
-                lines: Vec::new(),
-            })),
-            Command::Text { color, message, .. } => {
-                if !matches!(document.blocks.last(), Some(Block::Note(_))) {
-                    document.blocks.push(Block::Note(Note {
-                        heading: None,
-                        lines: Vec::new(),
-                    }));
-                }
-                if let Some(Block::Note(note)) = document.blocks.last_mut() {
-                    note.lines.push((clean(message), text_color(color)));
-                }
-            }
-            _ => {}
+/// The board with the legend beside it.
+fn layout(cells: &Cells, used: &[ResolvedType], options: &TermOptions) -> Vec<Line> {
+    let left = Side::new(cells, Edge::Left, options.packed);
+    let right = Side::new(cells, Edge::Right, options.packed);
+    let top = Stack::new(cells, Edge::Top);
+    let bottom = Stack::new(cells, Edge::Bottom);
+    let board = render_board(
+        &left,
+        &right,
+        &top,
+        &bottom,
+        &cells.pinout.title,
+        options.compact,
+    );
+
+    beside(board, legend_box(used), 4)
+}
+
+/// Turns labels into colored chips, applying the type filter and the label
+/// length limit.
+struct Cells<'a> {
+    pinout: &'a Pinout,
+    types: Option<&'a [String]>,
+    max_label: Option<usize>,
+}
+
+impl Cells<'_> {
+    /// The type of a label that is shown, or `None` for hidden and blank ones.
+    fn visible(&self, label: &Label) -> Option<ResolvedType> {
+        if label.text.is_empty() {
+            return None;
         }
+        let kind = self.pinout.resolve_type(label.kind.as_deref());
+        self.types
+            .is_none_or(|filter| filter.contains(&kind.name))
+            .then_some(kind)
     }
 
-    Ok(document)
-}
-
-fn current_pin_set(blocks: &mut [Block]) -> Result<&mut PinSet, RenderError> {
-    blocks
-        .iter_mut()
-        .rev()
-        .find_map(|b| match b {
-            Block::Pins(set) => Some(set),
-            Block::Note(_) => None,
+    fn chip(&self, label: &Label) -> Option<Chip> {
+        let kind = self.visible(label)?;
+        Some(Chip {
+            text: shorten(&label.text, self.max_label),
+            style: Style::chip(&kind),
         })
-        .ok_or_else(|| RenderError::MissingData("PIN without prior PINSET".to_string()))
+    }
+
+    /// Chips of a pin in order, `None` where a label is hidden or blank.
+    fn pin(&self, pin: &[Label]) -> Vec<Option<Chip>> {
+        pin.iter().map(|label| self.chip(label)).collect()
+    }
+
+    fn used_types(&self) -> Vec<ResolvedType> {
+        let mut used: Vec<ResolvedType> = Vec::new();
+        for edge in Edge::ALL {
+            for label in self.pinout.row(edge).iter().flatten() {
+                if let Some(kind) = self.visible(label) {
+                    if !used.iter().any(|u| u.name == kind.name) {
+                        used.push(kind);
+                    }
+                }
+            }
+        }
+        used.sort_by(|a, b| a.label.cmp(&b.label));
+        used
+    }
+
+    fn longest_label(&self) -> usize {
+        Edge::ALL
+            .iter()
+            .flat_map(|edge| self.pinout.row(*edge))
+            .flatten()
+            .filter(|label| self.visible(label).is_some())
+            .map(|label| label.text.chars().count())
+            .max()
+            .unwrap_or(0)
+    }
 }
 
-/// Two pin sets on opposite sides of the same row form one board.
-fn is_pair(a: &PinSet, b: &PinSet) -> bool {
-    let opposite = matches!(
-        (a.side, b.side),
-        (Side::Left, Side::Right) | (Side::Right, Side::Left)
-    );
-    opposite && b.heading.is_none() && (a.anchor.1 - b.anchor.1).abs() < 1.0
+/// A label drawn as a colored box.
+#[derive(Clone)]
+struct Chip {
+    text: String,
+    style: Style,
 }
 
-/// The chips of one pin set, laid out for one side of a board.
-struct SideBlock {
-    /// Left-hand blocks grow away from the board towards the left.
-    left: bool,
-    /// Chips of each row, aligned towards the board and `area` wide.
+impl Chip {
+    fn width(&self) -> usize {
+        self.text.chars().count() + 2
+    }
+
+    /// The chip with its background stretched to `width` columns.
+    fn line(&self, width: usize) -> Line {
+        let mut line = Line::default();
+        let fill = width.saturating_sub(self.width());
+        line.push(format!(" {}{} ", self.text, " ".repeat(fill)), self.style);
+        line
+    }
+}
+
+/// Cuts text longer than `limit` characters out of its middle, keeping the
+/// prefix and the pin number at the end: `GPIO36` becomes `GP…36`.
+fn shorten(text: &str, limit: Option<usize>) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    match limit {
+        Some(limit) if chars.len() > limit => {
+            let kept = limit.saturating_sub(1);
+            let tail = kept / 2;
+            let head = kept - tail;
+            let head: String = chars[..head].iter().collect();
+            let tail: String = chars[chars.len() - tail..].iter().collect();
+            format!("{}…{}", head.trim_end(), tail.trim_start())
+        }
+        _ => text.to_string(),
+    }
+}
+
+/// The chips of the left or right row, one line per pin, aligned towards
+/// the board.
+struct Side {
     rows: Vec<Line>,
-    pads: Vec<Option<Rgb>>,
+    pads: Vec<bool>,
     area: usize,
 }
 
-impl SideBlock {
-    fn new(
-        document: &Document,
-        set: &PinSet,
-        options: &TermOptions,
-        categories: &mut Vec<Category>,
-    ) -> Self {
-        let left = matches!(set.side, Side::Left | Side::Top);
-        let shown = |i: usize| {
-            document.labels.get(i).is_some_and(|label| {
-                options
-                    .labels
-                    .as_ref()
-                    .is_none_or(|filter| filter.iter().any(|f| f.eq_ignore_ascii_case(label)))
+impl Side {
+    /// Aligns the n-th label of every pin in one column, or flows the chips
+    /// of each pin next to each other when `packed`.
+    fn new(cells: &Cells, edge: Edge, packed: bool) -> Self {
+        let left = edge == Edge::Left;
+        let pins = cells.pinout.row(edge);
+        let chips: Vec<Vec<Option<Chip>>> = pins.iter().map(|pin| cells.pin(pin)).collect();
+
+        let columns = chips.iter().map(Vec::len).max().unwrap_or(0);
+        let widths: Vec<usize> = (0..columns)
+            .map(|n| {
+                chips
+                    .iter()
+                    .filter_map(|pin| pin.get(n).cloned().flatten())
+                    .map(|chip| chip.width())
+                    .max()
+                    .unwrap_or(0)
             })
-        };
+            .collect();
 
-        // Unpacked sets keep a fixed width per column so equal functions line up
-        let mut column_widths = vec![0; document.labels.len()];
-        if !set.packed {
-            for row in &set.rows {
-                for (i, cell) in row.cells.iter().enumerate() {
-                    if let Some(w) = column_widths.get_mut(i) {
-                        *w = (*w).max(cell.chars().count() + 2);
-                    }
-                }
-            }
-        }
-
-        let mut pieces_per_row = Vec::new();
-        for row in &set.rows {
-            let mut pieces = Vec::new();
-            for (i, text) in row.cells.iter().enumerate() {
-                if !shown(i) {
-                    continue;
-                }
-                let mut piece = Line::default();
-                if !text.is_empty() {
-                    let category = Category::classify(text, i);
-                    if !categories.contains(&category) {
-                        categories.push(category);
-                    }
-                    piece.push(format!(" {text} "), Style::chip(category.color()));
-                }
-                if piece.width > 0 || !set.packed {
-                    piece.pad_to(column_widths.get(i).copied().unwrap_or(0));
-                    pieces.push(piece);
-                }
-            }
-            if let Some(message) = &row.message {
-                let mut piece = Line::default();
-                piece.push(message.clone(), Style::default());
-                pieces.push(piece);
-            }
-            if left {
-                pieces.reverse();
-            }
-            let mut line = Line::default();
-            for (n, piece) in pieces.into_iter().enumerate() {
-                if n > 0 {
-                    line.pad(1);
-                }
-                line.append(piece);
-            }
-            pieces_per_row.push(line);
-        }
-
-        let area = width(&pieces_per_row);
-        let rows = pieces_per_row
+        let mut rows: Vec<Line> = chips
             .into_iter()
-            .map(|line| {
-                let mut aligned = Line::default();
-                if left {
-                    aligned.pad(area - line.width);
-                    aligned.append(line);
+            .map(|pin| {
+                let mut cells: Vec<Line> = if packed {
+                    pin.into_iter().flatten().map(|chip| chip.line(0)).collect()
                 } else {
-                    aligned.append(line);
-                    aligned.pad_to(area);
+                    // Chips fill their column; columns without any chip take
+                    // no space
+                    let mut pin = pin.into_iter();
+                    widths
+                        .iter()
+                        .map(|&w| (w, pin.next().flatten()))
+                        .filter(|(w, _)| *w > 0)
+                        .map(|(w, chip)| match chip {
+                            Some(chip) => chip.line(w),
+                            None => {
+                                let mut blank = Line::default();
+                                blank.pad(w);
+                                blank
+                            }
+                        })
+                        .collect()
+                };
+                if left {
+                    cells.reverse();
                 }
-                aligned
+                let mut line = Line::default();
+                for (n, cell) in cells.into_iter().enumerate() {
+                    if n > 0 {
+                        line.pad(1);
+                    }
+                    line.append(cell);
+                }
+                line
             })
             .collect();
-        let pads = set
-            .rows
-            .iter()
-            .map(|row| document.group_color(row.group.as_deref()))
-            .collect();
 
+        let area = width(&rows);
+        for row in &mut rows {
+            if left {
+                let mut aligned = Line::default();
+                aligned.pad(area - row.width);
+                aligned.append(std::mem::take(row));
+                *row = aligned;
+            } else {
+                row.pad_to(area);
+            }
+        }
         Self {
-            left,
             rows,
-            pads,
+            pads: pins.iter().map(|pin| !pin.is_empty()).collect(),
             area,
         }
     }
 }
 
-/// Draws a board with a pad for every pin and the chips of each side next to
-/// it. Either side may be missing for single sided headers.
+/// The chips of the top or bottom row, stacked vertically per pin.
+struct Stack {
+    columns: Vec<Column>,
+}
+
+struct Column {
+    /// Chips by distance from the board; `None` leaves the level empty.
+    chips: Vec<Option<Chip>>,
+    width: usize,
+    pad: bool,
+}
+
+impl Stack {
+    fn new(cells: &Cells, edge: Edge) -> Self {
+        let columns = cells
+            .pinout
+            .row(edge)
+            .iter()
+            .map(|pin| {
+                let chips = cells.pin(pin);
+                Column {
+                    width: chips
+                        .iter()
+                        .flatten()
+                        .map(Chip::width)
+                        .max()
+                        .unwrap_or(0)
+                        .max(1),
+                    chips,
+                    pad: !pin.is_empty(),
+                }
+            })
+            .collect();
+        Self { columns }
+    }
+
+    fn width(&self) -> usize {
+        self.columns.iter().map(|c| c.width).sum::<usize>() + self.columns.len().saturating_sub(1)
+    }
+
+    fn depth(&self) -> usize {
+        self.columns
+            .iter()
+            .map(|c| c.chips.len())
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// Positions of the pads, relative to the start of the stack.
+    fn pad_positions(&self) -> Vec<usize> {
+        let mut x = 0;
+        let mut positions = Vec::new();
+        for column in &self.columns {
+            if column.pad {
+                positions.push(x + (column.width - 1) / 2);
+            }
+            x += column.width + 1;
+        }
+        positions
+    }
+
+    /// The `level`th chip of every column, level 0 being next to the board.
+    fn line(&self, level: usize) -> Line {
+        let mut line = Line::default();
+        for (n, column) in self.columns.iter().enumerate() {
+            if n > 0 {
+                line.pad(1);
+            }
+            match column.chips.get(level).cloned().flatten() {
+                Some(chip) => line.append(chip.line(column.width)),
+                None => line.pad(column.width),
+            }
+        }
+        line
+    }
+}
+
+/// Draws the board with a pad for every pin and the chips around it.
 fn render_board(
-    left: Option<&SideBlock>,
-    right: Option<&SideBlock>,
+    left: &Side,
+    right: &Side,
+    top: &Stack,
+    bottom: &Stack,
     label: &str,
     compact: bool,
 ) -> Vec<Line> {
     let label_width = label.chars().count();
-    let inner = if label.is_empty() {
-        3
-    } else {
-        (label_width + 6).max(9)
-    };
-    let count = left
-        .map_or(0, |b| b.rows.len())
-        .max(right.map_or(0, |b| b.rows.len()));
+    let inner = [
+        if label.is_empty() { 3 } else { label_width + 6 },
+        top.width() + 2,
+        bottom.width() + 2,
+    ]
+    .into_iter()
+    .max()
+    .unwrap_or(3);
+    let count = left.rows.len().max(right.rows.len());
+    let left_width = if left.area > 0 { left.area + 1 } else { 0 };
+    let edge = Style::board(BOARD_EDGE, false);
 
     // Body lines: Some(pin index) or None for the gap between pins
     let mut body = Vec::new();
@@ -744,35 +555,55 @@ fn render_board(
         body.push(Some(i));
     }
     let middle = body.len().saturating_sub(1) / 2;
-    let left_width = left.map_or(0, |b| b.area + 1);
-    let edge = Style::board(BOARD_EDGE, false);
+
+    let stack_line = |stack: &Stack, level: usize| {
+        let mut line = Line::default();
+        line.pad(left_width + 1 + (inner - stack.width()) / 2);
+        line.append(stack.line(level));
+        line
+    };
+    let border = |stack: &Stack, corners: (&str, &str)| {
+        let start = (inner - stack.width()) / 2;
+        let pads: Vec<usize> = stack.pad_positions().iter().map(|p| p + start).collect();
+        // The edges share the board background so the body reads as one block
+        let mut line = Line::default();
+        line.pad(left_width);
+        line.push(corners.0, edge);
+        for x in 0..inner {
+            if pads.contains(&x) {
+                line.push("●", Style::board(PAD, true));
+            } else {
+                line.push("─", edge);
+            }
+        }
+        line.push(corners.1, edge);
+        line
+    };
 
     let mut lines = Vec::new();
-    let mut top = Line::default();
-    top.pad(left_width);
-    top.push(
-        format!("╭{}╮", "─".repeat(inner)),
-        Style::fg(Some(BOARD_EDGE)),
-    );
-    lines.push(top);
+    for level in (0..top.depth()).rev() {
+        lines.push(stack_line(top, level));
+    }
+    lines.push(border(top, ("╭", "╮")));
 
     for (n, pin) in body.iter().enumerate() {
-        let row = |side| pin_row(side, *pin);
         let mut line = Line::default();
-
-        match row(left) {
-            Some((block, i)) => {
-                line.append(block.rows[i].clone());
+        match pin.filter(|i| *i < left.rows.len()) {
+            Some(i) if left_width > 0 => {
+                line.append(left.rows[i].clone());
                 line.pad(1);
             }
-            None => line.pad(left_width),
+            _ => line.pad(left_width),
         }
 
-        line.push("│", edge);
-        let pad = |side, line: &mut Line| match row(side) {
-            Some((block, i)) => line.push("●", Style::board(block.pads[i].unwrap_or(PAD), true)),
-            None => line.push(" ", Style::board(BOARD, false)),
+        let pad = |side: &Side, line: &mut Line| {
+            if pin.is_some_and(|i| side.pads.get(i).copied().unwrap_or(false)) {
+                line.push("●", Style::board(PAD, true));
+            } else {
+                line.push(" ", Style::board(BOARD, false));
+            }
         };
+        line.push("│", edge);
         pad(left, &mut line);
         let text = if n == middle { label } else { "" };
         let space = inner - 2 - text.chars().count();
@@ -782,38 +613,34 @@ fn render_board(
         pad(right, &mut line);
         line.push("│", edge);
 
-        if let Some((block, i)) = row(right) {
+        if let Some(i) = pin.filter(|i| *i < right.rows.len() && right.area > 0) {
             line.pad(1);
-            line.append(block.rows[i].clone());
+            line.append(right.rows[i].clone());
         }
         lines.push(line);
     }
 
-    let mut bottom = Line::default();
-    bottom.pad(left_width);
-    bottom.push(
-        format!("╰{}╯", "─".repeat(inner)),
-        Style::fg(Some(BOARD_EDGE)),
-    );
-    lines.push(bottom);
+    lines.push(border(bottom, ("╰", "╯")));
+    for level in 0..bottom.depth() {
+        lines.push(stack_line(bottom, level));
+    }
     lines
 }
 
-fn pin_row(side: Option<&SideBlock>, pin: Option<usize>) -> Option<(&SideBlock, usize)> {
-    side.zip(pin).filter(|(block, i)| *i < block.rows.len())
-}
-
-fn legend_entry(category: Category) -> Line {
+fn legend_entry(kind: &ResolvedType) -> Line {
     let mut line = Line::default();
-    line.push("  ", Style::chip(category.color()));
-    line.push(format!(" {}", category.name()), Style::default());
+    line.push("  ", Style::chip(kind));
+    line.push(format!(" {}", kind.label), Style::default());
     line
 }
 
-fn legend_box(categories: &[Category]) -> Vec<Line> {
-    let entries: Vec<Line> = categories.iter().map(|c| legend_entry(*c)).collect();
+fn legend_box(types: &[ResolvedType]) -> Vec<Line> {
+    if types.is_empty() {
+        return Vec::new();
+    }
+    let entries: Vec<Line> = types.iter().map(legend_entry).collect();
     let inner = width(&entries) + 2;
-    let border = Style::fg(Some(FRAME));
+    let border = Style::fg(FRAME);
 
     let mut lines = Vec::new();
     let mut top = Line::default();
@@ -830,24 +657,6 @@ fn legend_box(categories: &[Category]) -> Vec<Line> {
     let mut bottom = Line::default();
     bottom.push(format!("╰{}╯", "─".repeat(inner)), border);
     lines.push(bottom);
-    lines
-}
-
-/// Legend entries flowed into lines no wider than `max`.
-fn legend_inline(categories: &[Category], max: usize) -> Vec<Line> {
-    let mut lines = vec![Line::default()];
-    for category in categories {
-        let entry = legend_entry(*category);
-        let current = lines.last_mut().unwrap();
-        if current.width > 0 && current.width + 3 + entry.width > max {
-            lines.push(Line::default());
-        }
-        let current = lines.last_mut().unwrap();
-        if current.width > 0 {
-            current.pad(3);
-        }
-        current.append(entry);
-    }
     lines
 }
 
@@ -868,9 +677,10 @@ fn beside(left: Vec<Line>, right: Vec<Line>, gap: usize) -> Vec<Line> {
         .collect()
 }
 
-/// Surrounds a section with a rounded border, the title set into its top edge.
+/// Surrounds the content with a rounded border, the title set into its top
+/// edge.
 fn frame(title: Option<&str>, content: Vec<Line>) -> Vec<Line> {
-    let border = Style::fg(Some(FRAME));
+    let border = Style::fg(FRAME);
     let title_width = title.map_or(0, |t| t.chars().count() + 3);
     let inner = (width(&content) + 4).max(title_width + 1);
 
@@ -904,44 +714,7 @@ fn frame(title: Option<&str>, content: Vec<Line>) -> Vec<Line> {
     lines
 }
 
-fn render_note(note: &Note, out: &mut String, color: bool) {
-    if let Some(heading) = &note.heading {
-        let mut line = Line::default();
-        line.push(heading.clone(), Style::bold());
-        line.write(out, color);
-    }
-    for (text, fg) in &note.lines {
-        let mut line = Line::default();
-        line.push(text.clone(), Style::fg(*fg));
-        line.write(out, color);
-    }
-    out.push('\n');
-}
-
-/// Collapse the escaped line breaks used in CSV cells into spaces and drop
-/// quotes the CSV reader keeps when a quoted field follows a space.
-fn clean(text: &str) -> String {
-    let text = text.trim();
-    let text = text
-        .strip_prefix('"')
-        .and_then(|t| t.strip_suffix('"'))
-        .unwrap_or(text);
-    text.replace("\\\\n", " ")
-        .replace("\\n", " ")
-        .replace('\n', " ")
-        .trim()
-        .to_string()
-}
-
-/// Text colors meant for a white page; black and white would vanish on one of
-/// the terminal themes, so those fall back to the terminal foreground.
-fn text_color(name: &str) -> Option<Rgb> {
-    match name.trim().to_ascii_lowercase().as_str() {
-        "black" | "white" | "none" | "" => None,
-        other => parse_color(other),
-    }
-}
-
+/// Parses the CSS colors SVG accepts: names and `#rgb` / `#rrggbb`.
 fn parse_color(name: &str) -> Option<Rgb> {
     let name = name.trim().to_ascii_lowercase();
     if let Some(hex) = name.strip_prefix('#') {
@@ -1020,50 +793,26 @@ const CSS_COLORS: &[(&str, u32)] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::types::{JustifyX, JustifyY, PinType, WireType};
 
-    fn pin(attributes: &[&str]) -> Command {
-        Command::Pin {
-            wire: Some(WireType::Digital),
-            pin_type: Some(PinType::IO),
-            group: None,
-            attributes: attributes.iter().map(|a| a.to_string()).collect(),
-        }
-    }
-
-    fn pin_set(side: Side) -> Command {
-        Command::PinSet {
-            side,
-            packed: true,
-            justify_x: JustifyX::Center,
-            justify_y: JustifyY::Center,
-            line_step: 25.0,
-            pin_width: 60.0,
-            group_width: 80.0,
-            leader_offset: 10.0,
-            column_gap: 5.0,
-            leader_h_step: 2.0,
-        }
-    }
-
-    fn commands() -> Vec<Command> {
-        vec![
-            Command::Labels {
-                default: "DEFAULT".to_string(),
-                pin_type: None,
-                group: None,
-                labels: vec!["GPIO".to_string(), "Function".to_string()],
-            },
-            Command::Draw,
-            Command::Anchor { x: 50.0, y: 100.0 },
-            pin_set(Side::Left),
-            pin(&["GPIO5", "MISO"]),
-            pin(&["GPIO6", ""]),
-            Command::Anchor { x: 150.0, y: 100.0 },
-            pin_set(Side::Right),
-            pin(&["5V", ""]),
-            pin(&["GND", ""]),
-        ]
+    fn pinout() -> Pinout {
+        Pinout::from_yaml_str(
+            r#"
+title: MCU
+width: 4
+height: 2
+pins:
+  left:
+    - [ "GPIO5:gpio", "MISO:spi" ]
+    - [ "GPIO6:gpio" ]
+  right:
+    - [ "5V:power" ]
+    - [ "GND:gnd" ]
+  bottom:
+    -
+    - [ "SWDIO:gpio", "D:gpio" ]
+"#,
+        )
+        .unwrap()
     }
 
     fn plain(options: TermOptions) -> String {
@@ -1071,94 +820,155 @@ mod tests {
             color: false,
             ..options
         };
-        render_terminal(&commands(), &options).unwrap()
+        render_terminal(&pinout(), &options).unwrap()
     }
 
     #[test]
     fn renders_board_with_legend() {
-        let out = plain(TermOptions {
-            title: Some("MCU".to_string()),
-            ..TermOptions::default()
-        });
+        let out = plain(TermOptions::default());
         let expected = "\
-╭─ MCU ───────────────────────────────────────────────╮
-│                                                     │
-│                 ╭─────────╮          ╭───────────╮  │
-│   MISO   GPIO5  │●       ●│  5V      │    GPIO   │  │
-│                 │   MCU   │          │    Ground │  │
-│          GPIO6  │●       ●│  GND     │    Power  │  │
-│                 ╰─────────╯          │    SPI    │  │
-│                                      ╰───────────╯  │
-│                                                     │
-╰─────────────────────────────────────────────────────╯
-
+╭─ MCU ─────────────────────────────────────────────────────╮
+│                                                           │
+│                 ╭───────────────╮          ╭───────────╮  │
+│   MISO   GPIO5  │●             ●│  5V      │    GPIO   │  │
+│                 │      MCU      │          │    Ground │  │
+│          GPIO6  │●             ●│  GND     │    Power  │  │
+│                 ╰──────●────────╯          │    SPI    │  │
+│                      SWDIO                 ╰───────────╯  │
+│                      D                                    │
+│                                                           │
+╰───────────────────────────────────────────────────────────╯
 ";
         assert_eq!(out, expected, "\n{out}");
     }
 
     #[test]
-    fn compact_board_has_no_gaps_between_pins() {
+    fn back_side_swaps_left_and_right() {
         let out = plain(TermOptions {
+            back: true,
             compact: true,
             ..TermOptions::default()
         });
-        assert!(out.contains("GPIO6  │● ●│  GND"), "\n{out}");
+        assert!(out.starts_with("╭─ MCU (back) "), "\n{out}");
+        assert!(out.contains(" 5V   │●"), "\n{out}");
     }
 
     #[test]
-    fn label_filter_hides_columns_and_rejects_unknown_labels() {
+    fn type_filter_hides_labels_and_rejects_unknown_types() {
         let out = plain(TermOptions {
-            labels: Some(vec!["gpio".to_string()]),
+            types: Some(vec!["gpio".to_string()]),
             ..TermOptions::default()
         });
-        assert!(!out.contains("MISO"));
+        assert!(!out.contains("MISO") && !out.contains("5V"), "\n{out}");
+        assert!(out.contains("GPIO5"));
 
         let options = TermOptions {
-            labels: Some(vec!["Nope".to_string()]),
+            types: Some(vec!["nope".to_string()]),
             ..TermOptions::default()
         };
-        assert!(render_terminal(&commands(), &options).is_err());
+        assert!(render_terminal(&pinout(), &options).is_err());
     }
 
     #[test]
-    fn classifies_function_names() {
-        let cases = [
-            ("GPIO21 EXTINT:6", 2, Category::Gpio),
-            ("PA05 AIN:1", 0, Category::Gpio),
-            ("ADC1:0", 3, Category::Analog),
-            ("A5", 1, Category::Analog),
-            ("TOUCH9", 4, Category::Touch),
-            ("X:1/Y:7", 4, Category::Touch),
-            ("HSPI:CLK", 6, Category::Spi),
-            ("MISO", 1, Category::Spi),
-            ("VSPICLK", 6, Category::Spi),
-            ("SDA", 0, Category::I2c),
-            ("U0TXD PA01", 1, Category::Uart),
-            ("TX", 0, Category::Uart),
-            ("SCOM3:0 SCOM5:0", 6, Category::Serial),
-            ("TC0:WO0 TCC0:WO4", 7, Category::Pwm),
-            ("EXTINT:2", 2, Category::Interrupt),
-            ("SD:CLK", 7, Category::SdCard),
-            ("EMAC TXD2", 8, Category::Ethernet),
-            ("32K XP", 1, Category::Clock),
-            ("MTMS", 1, Category::Debug),
-            ("CCL0:IN0", 8, Category::Logic),
-            ("RTC:00", 5, Category::Rtc),
-            ("3.3VP", 0, Category::Power),
-            ("GND", 0, Category::Ground),
-            ("RST", 0, Category::Control),
-            ("E14*", 0, Category::Pin),
-            ("WHATEVER", 3, Category::Other),
-        ];
-        for (text, column, expected) in cases {
-            assert_eq!(Category::classify(text, column), expected, "{text}");
-        }
+    fn prints_notes_only_when_asked() {
+        let mut pinout = pinout();
+        pinout.notes = vec![crate::model::Note {
+            title: Some("Features".to_string()),
+            lines: vec!["WiFi".to_string()],
+        }];
+        let options = TermOptions {
+            color: false,
+            ..TermOptions::default()
+        };
+        assert!(!render_terminal(&pinout, &options).unwrap().contains("WiFi"));
+
+        let options = TermOptions {
+            notes: true,
+            ..options
+        };
+        let out = render_terminal(&pinout, &options).unwrap();
+        assert!(out.ends_with("╯\n\nFeatures\nWiFi\n"), "\n{out}");
+    }
+
+    #[test]
+    fn aligns_label_columns_and_shortens_to_fit() {
+        let pinout = Pinout::from_yaml_str(
+            r#"
+title: T
+pins:
+  right:
+    - [ "GPIO1:gpio", "", "SDA:i2c" ]
+    - [ "GPIO10:gpio", "A0:analog", "UART0 TX:uart" ]
+"#,
+        )
+        .unwrap();
+        let options = TermOptions {
+            color: false,
+            compact: true,
+            ..TermOptions::default()
+        };
+        let out = render_terminal(&pinout, &options).unwrap();
+        assert!(out.contains("●│  GPIO1         SDA          │"), "\n{out}");
+        // Chips fill their column
+        assert!(out.contains(" GPIO1  "), "\n{out}");
+        assert!(out.contains("●│  GPIO10   A0   UART0 TX     │"), "\n{out}");
+
+        let packed = render_terminal(
+            &pinout,
+            &TermOptions {
+                packed: true,
+                ..options.clone()
+            },
+        )
+        .unwrap();
+        assert!(packed.contains("●│  GPIO1   SDA "), "\n{packed}");
+
+        // A column that is empty on every pin is skipped without shifting
+        // the labels after it
+        let skipped = Pinout::from_yaml_str(
+            r#"
+pins:
+  left:
+    - [ "PB5:gpio", "", "ADC0:analog" ]
+    - [ "PB3:gpio", "", "MISO:spi" ]
+"#,
+        )
+        .unwrap();
+        let aligned = render_terminal(&skipped, &options).unwrap();
+        assert!(aligned.contains(" ADC0   PB5  │●"), "\n{aligned}");
+        assert!(aligned.contains(" MISO   PB3  │●"), "\n{aligned}");
+
+        // Too narrow: labels are cut, the legend stays beside the board
+        let wide = width_of(&out);
+        let narrow = render_terminal(
+            &pinout,
+            &TermOptions {
+                max_width: Some(wide - 4),
+                ..options
+            },
+        )
+        .unwrap();
+        assert!(width_of(&narrow) <= wide - 4, "\n{narrow}");
+        assert!(narrow.contains(" UA…TX "), "\n{narrow}");
+        assert!(narrow.contains("│    GPIO   │"), "\n{narrow}");
+    }
+
+    #[test]
+    fn shortens_from_the_middle() {
+        assert_eq!(shorten("GPIO36", Some(5)), "GP…36");
+        assert_eq!(shorten("EMAC TXD2", Some(6)), "EMA…D2");
+        assert_eq!(shorten("GPIO5", Some(5)), "GPIO5");
+        assert_eq!(shorten("GPIO5", None), "GPIO5");
+    }
+
+    fn width_of(out: &str) -> usize {
+        out.lines().map(|l| l.chars().count()).max().unwrap_or(0)
     }
 
     #[test]
     fn parses_named_and_hex_colors() {
         assert_eq!(parse_color("DeepSkyBlue"), Some(Rgb(0, 191, 255)));
         assert_eq!(parse_color("#f80"), Some(Rgb(255, 136, 0)));
-        assert_eq!(parse_color("none"), None);
+        assert_eq!(parse_color("#0"), None);
     }
 }

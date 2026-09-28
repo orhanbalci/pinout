@@ -1,0 +1,458 @@
+title: ESP32-MAXIO
+width: 11
+height: 26
+types:
+  clock:
+    label: Clock
+    bgcolor: '#c0ca33'
+    fgcolor: '#000000'
+  control:
+    label: Control
+    bgcolor: '#ffb300'
+    fgcolor: '#000000'
+  debug:
+    label: Debug
+    bgcolor: '#4e342e'
+    fgcolor: '#ffffff'
+  ethernet:
+    label: Ethernet
+    bgcolor: '#1e88e5'
+    fgcolor: '#ffffff'
+  interrupt:
+    label: Interrupt
+    bgcolor: '#00acc1'
+    fgcolor: '#ffffff'
+  logic:
+    label: Custom Logic
+    bgcolor: '#827717'
+    fgcolor: '#ffffff'
+  pwm:
+    label: PWM / Timer
+    bgcolor: '#fdd835'
+    fgcolor: '#000000'
+  rtc:
+    label: RTC
+    bgcolor: '#a1887f'
+    fgcolor: '#000000'
+  sd:
+    label: SD Card
+    bgcolor: '#3949ab'
+    fgcolor: '#ffffff'
+  serial:
+    label: Serial (SERCOM)
+    bgcolor: '#ab47bc'
+    fgcolor: '#ffffff'
+  touch:
+    label: Touch
+    bgcolor: '#ec407a'
+    fgcolor: '#ffffff'
+pins:
+  left:
+  - - 3.3VP:power
+    - 3.3V (~250ma) Switched Supply
+  - - I36
+    - SENSOR VP:analog
+    - GPIO36:gpio
+    - ADC1:0:analog
+    - ''
+    - RTC:00:rtc
+  - - I39
+    - SENSOR VN:analog
+    - GPIO39:gpio
+    - ADC1:3:analog
+    - ''
+    - RTC:03:rtc
+  - - I34
+    - VDET 1:analog
+    - GPIO34:gpio
+    - ADC1:6:analog
+    - ''
+    - RTC:04:rtc
+  - - I35
+    - VDET 2:analog
+    - GPIO35:gpio
+    - ADC1:7:analog
+    - ''
+    - RTC:05:rtc
+  - - E32
+    - 32K XP:clock
+    - GPIO32:gpio
+    - ADC1:4:analog
+    - TOUCH9:touch
+    - RTC:09:rtc
+  - - E33
+    - 32K XN:clock
+    - GPIO33:gpio
+    - ADC1:5:analog
+    - TOUCH8:touch
+    - RTC:08:rtc
+  - - E14*
+    - MTMS:debug
+    - GPIO14:gpio
+    - ADC2:6:analog
+    - TOUCH6:touch
+    - RTC:16:rtc
+    - HSPI:CLK:spi
+    - SD:CLK:sd
+    - EMAC TXD2:ethernet
+  - - E12*
+    - MTDI:debug
+    - GPIO12:gpio
+    - ADC2:5:analog
+    - TOUCH5:touch
+    - RTC:15:rtc
+    - HSPI:Q:spi
+    - SD:D2:sd
+    - EMAC TXD3:ethernet
+  - - E13*
+    - MTCK:debug
+    - GPIO13:gpio
+    - ADC2:4:analog
+    - TOUCH4:touch
+    - RTC:14:rtc
+    - HSPI:D:spi
+    - SD:D3:sd
+    - EMAC RXER:ethernet
+  - - E27
+    - GPIO27:gpio
+    - GPIO27:gpio
+    - ADC2:7:analog
+    - TOUCH7:touch
+    - RTC:17:rtc
+    - ''
+    - ''
+    - EMAC RXDV:ethernet
+  - - E26
+    - GPIO26:gpio
+    - GPIO26:gpio
+    - ADC2:9:analog
+    - DAC:2:analog
+    - RTC:07:rtc
+    - ''
+    - ''
+    - EMAC RXD1:ethernet
+  - - E25
+    - GPIO25:gpio
+    - GPIO25:gpio
+    - ADC2:8:analog
+    - DAC:1:analog
+    - RTC:06:rtc
+    - ''
+    - ''
+    - EMAC RXD0:ethernet
+  - - X02
+    - PA02:gpio
+    - EXTINT:2:interrupt
+    - AIN:0:analog
+    - Y:0 VOUT:0:touch
+    - OA NEG:0:analog
+  - - X04
+    - PA04:gpio
+    - EXTINT:4:interrupt
+    - AIN:4:analog
+    - AC:0 VREFB:analog
+    - OA OUT:2:analog
+    - SCOM0:0:serial
+    - TCC0:WO0:pwm
+    - CCL0:IN0:logic
+  - - SDA:i2c
+    - GPIO21 PA22:gpio
+    - GPIO21 EXTINT:6:gpio
+    - ''
+    - ''
+    - ''
+    - SCOM3:0 SCOM5:0:serial
+    - TC0:WO0 TCC0:WO4:pwm
+    - CCL2:IN0:logic
+  - - SCL:i2c
+    - GPIO22 PA23:gpio
+    - GPIO22 EXTINT:7:gpio
+    - ''
+    - ''
+    - ''
+    - SCOM3:1 SCOM5:1:serial
+    - TC0:WO1 TCC0:WO5:pwm
+    - CCL2:IN1:logic
+  - - X05
+    - PA05:gpio
+    - EXTINT:5:interrupt
+    - AIN:5:analog
+    - AC:1 VOUT:1:analog
+    - OA POS:2:analog
+    - SCOM0:1:serial
+    - TCC0:WO1:pwm
+    - CCL0:IN1:logic
+  - - X06
+    - PA06:gpio
+    - EXTINT:6:interrupt
+    - AIN:6:analog
+    - AC:2 Y:4:analog
+    - OA POS:0:analog
+    - SCOM0:2:serial
+    - TCC1:WO0:pwm
+    - CCL0:IN2:logic
+  - - X07
+    - PA07:gpio
+    - EXTINT:7:interrupt
+    - AIN:7:analog
+    - AC:3:analog
+    - OA OUT:0:analog
+    - SCOM0:3:serial
+    - TCC1:WO1:pwm
+    - CCL0:OUT:logic
+  - - VCC:power
+    - Unregulated Supply (5V - 3.5V)
+  - - GND:gnd
+    - Ground Reference
+  right:
+  - - 3V3:power
+    - 3.3V (~450ma) Continuous Supply
+  - - E23
+    - GPIO23:gpio
+    - GPIO23:gpio
+    - ''
+    - ''
+    - ''
+    - VSPID:spi
+  - - TX:uart
+    - U0TXD PA01:uart
+    - GPIO01 EXTINT:1:gpio
+    - ''
+    - ''
+    - ''
+    - U0TXD SCOM1:1:uart
+    - CLK:OUT3 TCC2:WO1:clock
+  - - RX:uart
+    - U0RXD PA00:uart
+    - GPIO03 EXTINT:0:gpio
+    - ''
+    - ''
+    - ''
+    - U0RXD SCOM1:0:uart
+    - CLK:OUT2 TCC2:WO0:clock
+  - - E19
+    - GPIO19:gpio
+    - GPIO19:gpio
+    - ''
+    - ''
+    - ''
+    - VSPIQ:spi
+    - ''
+    - EMAC TXD0:ethernet
+  - - E18
+    - GPIO18:gpio
+    - GPIO18:gpio
+    - ''
+    - ''
+    - ''
+    - VSPICLK:spi
+  - - E05
+    - GPIO5:gpio
+    - GPIO5:gpio
+    - ''
+    - ''
+    - ''
+    - VSPICS0:spi
+    - ''
+    - EMAC RXCLK:ethernet
+  - - E00
+    - GPIO0 PA14:gpio
+    - GPIO0 EXTINT14:gpio
+    - ADC2:1:analog
+    - TOUCH1:touch
+    - RTC:11 SCOM2:2:rtc
+    - SCOM4:2:serial
+    - CLK:OUT1 XIN:clock
+    - EMAC TXCLK:ethernet
+  - - E04*
+    - GPIO4:gpio
+    - GPIO4:gpio
+    - ADC2:0:analog
+    - TOUCH0:touch
+    - RTC:10:rtc
+    - HSPI:HD:spi
+    - SD:D1:sd
+    - EMAC TXER:ethernet
+  - - E02*
+    - GPIO2:gpio
+    - GPIO2:gpio
+    - ADC2:2:analog
+    - TOUCH2:touch
+    - RTC:12:rtc
+    - HSPI:WP:spi
+    - SD:D0:sd
+  - - E15*
+    - MTDO:debug
+    - GPIO15:gpio
+    - ADC2:3:analog
+    - TOUCH1:touch
+    - RTC:13:rtc
+    - HSPI:CS0:spi
+    - SD:CMD:sd
+    - EMAC RXD3:ethernet
+  - - X31
+    - PA31:gpio
+    - EXTINT:11:interrupt
+    - ''
+    - ''
+    - SWDIO:debug
+    - SCOM1:2:serial
+    - TCC1:WO0:pwm
+    - CCL1:OUT:logic
+  - - X30
+    - PA30:gpio
+    - EXTINT:10:interrupt
+    - ''
+    - ''
+    - SWCLK:debug
+    - SCOM1:3:serial
+    - TCC1:WO1:pwm
+    - CCL1:IN0:logic
+  - - RST:control
+    - Board Master Reset (Active Low)
+  - - X09
+    - PA09:gpio
+    - EXTINT:9:interrupt
+    - AIN:17:analog
+    - X:1/Y:7:touch
+    - ''
+    - SCOM0:1 SCOM2:1:serial
+    - TCC0:WO1 TCC1:WO3:pwm
+    - CCL1:IN1:logic
+  - - X10
+    - PA10:gpio
+    - EXTINT:10:interrupt
+    - AIN:18:analog
+    - X:2/Y:8:touch
+    - ''
+    - SCOM0:2 SCOM2:2:serial
+    - TCC1:WO0 TCC0:WO2:pwm
+    - CCL1:IN2:logic
+  - - X16
+    - PA16:gpio
+    - EXTINT:0:interrupt
+    - ''
+    - X:4:touch
+    - ''
+    - SCOM1:0 SCOM3:0:serial
+    - TCC2:WO0 TCC0:WO6:pwm
+    - CCL0:IN0:logic
+  - - X17
+    - PA17:gpio
+    - EXTINT:1:interrupt
+    - ''
+    - X:5:touch
+    - ''
+    - SCOM1:1 SCOM3:1:serial
+    - TCC2:WO1 TCC0:WO7:pwm
+    - CCL0:IN1:logic
+  - - X18
+    - PA18:gpio
+    - EXTINT:2:interrupt
+    - ''
+    - X:6:touch
+    - ''
+    - SCOM1:2 SCOM3:2:serial
+    - TC4:WO0 TCC0:WO2:pwm
+    - CCL0:IN2:logic
+  - - X19
+    - PA19:gpio
+    - EXTINT:3:interrupt
+    - ''
+    - X:7:touch
+    - ''
+    - SCOM1:3 SCOM3:3:serial
+    - TC4:WO1 TCC0:WO3:pwm
+    - CCL0:OUT:logic
+  - - VBUS:power
+    - MAX 5.2V Power IO, Primary Supply
+  - - GND:gnd
+    - Ground Reference
+  - - PA08:gpio
+    - Status LED Data (Internal)
+  - - PA11:gpio
+    - ESP32 Power Control (Internal)
+  - - PA15:gpio
+    - SDCard Inserted Detect (Internal)
+  - - PA27:gpio
+    - USB Connector ID (Internal)
+notes:
+- title: Battery Connector
+  lines:
+  - WARNING!
+  - CHECK BATTERY ORIENTATION
+  - NO REVERSE POLARITY PROTECTION
+- lines:
+  - 2.4Ghz External Antenna
+  - Optional Antenna Diversity (Max 16)
+- lines:
+  - USB Micro AB
+  - Device/Host/OTG
+  - Fully Programable
+  - Full Speed (12Mbps)
+  - Power Supply (5V)
+- lines:
+  - Micro SD/HC/XC Card
+  - 4 Bit Mode (DEFAULT)
+  - 1 Bit Mode (CUT JP3/JP4/JP6)
+  - Disabled (CUT JP1-JP6)
+- title: Features
+  lines:
+  - ESP32-MAXIO by Sakura Industries Limited
+  - ''
+  - ESP32 Wrover-i Module
+  - '* CPU : 2 x Xtensa 32-bit LX6 @ 240Mhz'
+  - '* SRAM : 520KB'
+  - '* Flash :  16MB'
+  - '* PSRAM :   8MB'
+  - '* WiFi : 2.4Ghz 802.11 b/g/n'
+  - '* Bluetooth : v4.2 BR/EDR and BLE'
+  - '* ADC : 12-bit SAR ADC up to 18 channels @ 6Khz'
+  - '* DAC : 8-bit x 2 @ 6Khz'
+  - '* TOUCH : 10 x Capacitive touch sensors'
+  - '* SPI:4, I2S:2, I2C:2, UART:3, CAN 2.0:1'
+  - '* SD/SDIO/CE-ATA/MMC/eMMC host controller'
+  - '* SDIO/SPI slave controller'
+  - '* Ethernet MAC interface'
+  - '* Infrared remote controller (TX/RX x 8)'
+  - '* Motor & LED PWM'
+  - '* Termperature and Hall effect Sensors'
+  - ''
+  - BOOTLOADER
+  - '* Simulated Thumb Drive'
+  - '* Driverless Drag and drop programming of ESP32 & SAML21'
+  - '* Traditional USB serial interface still present'
+  - '* I2C IO Expansion Interface for ESP32 to SAML21'
+- lines:
+  - ''
+  - ''
+  - Microchip SAML21 IO Coprocessor
+  - '* CPU : ARM Cortex M0+ @ 48Mhz'
+  - '* SRAM : 40KB'
+  - '* FLASH : 264KB'
+  - '* Ultra Low Power'
+  - '* Timers : 6'
+  - '* USB Interface : Device & Host'
+  - '* AES Engine & True Random Number Generator'
+  - '* 4 x Configurable Custom Logic (CCL) (LUTs)'
+  - '* 6 x SERCOMs (UART/SPI/I2C)'
+  - '* ADC 12/16 Bit @ 1Msps (10 Channels)'
+  - '* DAC 12 Bit @ 1Msps (2 Channels)'
+  - '* 3 x OPAMPS'
+  - '* 2 x Analog Comparators'
+  - '* Real Time Clock'
+  - ''
+  - ''
+  - ''
+  - STATUS LEDS
+  - '* 4 x RGB Status Leds'
+  - '* Neopixel/WS2812B Single Wire Bus'
+  - '* LED Bus Header for driving up to 1020 LEDS @ 30fps.'
+- lines:
+  - 'Credits:'
+  - Icons made by Freepik (http://www.freepik.com) from Flaticon (https://www.flaticon.com/) is licensed by Creative Commons BY 3.0
+  - http://simpleicon.com/wp-content/uploads/antenna-3.svg
+  - https://upload.wikimedia.org/wikipedia/commons/6/67/USB_icon.svg
+  - https://upload.wikimedia.org/wikipedia/commons/a/ae/WiFi_Logo.svg
+  - https://upload.wikimedia.org/wikipedia/commons/d/da/Bluetooth.svg
+  - https://upload.wikimedia.org/wikipedia/commons/9/92/SDXC.svg

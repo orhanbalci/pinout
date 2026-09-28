@@ -1,19 +1,25 @@
-# Pinout
+# pinout
 
-A Rust library and command-line tool for generating pinout diagrams of microcontrollers, development boards, and electronic components. Boards are described in the YAML format of [pinoutleaf](https://github.com/splitbrain/pinoutleaf) and rendered as SVG, as colored terminal output, or converted to JSON.
+[![Crates.io](https://img.shields.io/crates/v/pinout.svg)](https://crates.io/crates/pinout)
+[![Documentation](https://docs.rs/pinout/badge.svg)](https://docs.rs/pinout)
+[![License](https://img.shields.io/github/license/orhanbalci/pinout.svg)](https://github.com/orhanbalci/pinout/blob/master/LICENSE)
 
-## Features
+Pinout diagrams for microcontrollers, development boards and chips. Boards
+are described in the YAML format of [pinoutleaf](https://github.com/splitbrain/pinoutleaf)
+and drawn as true-to-scale SVG, as colored terminal output, or edited live in
+an interactive terminal UI.
 
-- **pinoutleaf-compatible YAML**: Describe the pins of a board as `label:type` lists; existing pinoutleaf files work as they are
-- **One model, many outputs**: SVG, terminal (ANSI truecolor), JSON and YAML are rendered from the same board model
-- **True-to-scale SVG**: Pads sit on the 0.1" raster and the SVG is sized in millimeters, so a print at 100% matches the real board
-- **Board photos**: Front and back images are embedded into the SVG, with the back view mirrored automatically
-- **Terminal preview**: Colored label chips, a board with pads, a color legend and optional notes, right in the terminal
-- **Legacy CSV import**: The older CSV descriptions convert to the YAML model
+![front view](https://raw.githubusercontent.com/orhanbalci/pinout/master/assets/tui/front.png)
 
-## Installation
+## ✨ Features
 
-### From Source
+- **pinoutleaf-compatible YAML**: pins are lists of `label:type` strings; existing pinoutleaf files work as they are
+- **One model, many outputs**: SVG, terminal, JSON and YAML are all rendered from the same board model
+- **True-to-scale SVG**: pads sit on the 0.1" raster and the SVG is sized in millimeters, so a print at 100% fits the real board
+- **Board photos**: front and back images are embedded into the SVG, and the back view is mirrored for you
+- **Interactive editor**: a vim-like YAML editor next to a preview that follows every change
+
+## 📦 Installation
 
 ```bash
 git clone https://github.com/orhanbalci/pinout
@@ -21,18 +27,17 @@ cd pinout
 cargo build --release
 ```
 
-### As a Library
-
-Add this to your `Cargo.toml`:
+As a library:
 
 ```toml
 [dependencies]
-pinout = "0.1.0"
+pinout = "0.1"
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
-1. **Describe the board** (`my_board.yaml`):
+Describe the board in `my_board.yaml`:
+
 ```yaml
 title: "ESP32 C3 Super Mini"
 
@@ -57,65 +62,69 @@ pins:
     - [ "GPIO4:gpio", "A4:analog", "SCK:spi" ]
 ```
 
-2. **Look at it in the terminal**:
+Then look at it in the terminal, edit it interactively, or write the SVG for
+the front and the back:
+
 ```bash
 cargo run --example pinout -- my_board.yaml
-```
-
-3. **Generate the SVG**:
-```bash
+cargo run --example pinout -- my_board.yaml --tui
 cargo run --example pinout -- my_board.yaml -o my_board.svg
 cargo run --example pinout -- my_board.yaml --back -o my_board.back.svg
 ```
 
-## Usage
+## 🖥️ Interactive Editor
 
-### Command Line Tool
+`--tui` (or `-i`) opens the description in a terminal UI built with
+[ratatui](https://ratatui.rs) and [edtui](https://github.com/preiter93/edtui).
+Every edit is parsed right away; while the text has errors the other tabs keep
+the last valid version and the status line shows what is wrong.
+
+![editor](https://raw.githubusercontent.com/orhanbalci/pinout/master/assets/tui/editor.png)
+
+![pins](https://raw.githubusercontent.com/orhanbalci/pinout/master/assets/tui/pins.png)
+
+![columns](https://raw.githubusercontent.com/orhanbalci/pinout/master/assets/tui/columns.png)
+
+| Tab | Keys |
+| --- | --- |
+| `F1` Editor | vim keys (`i`, `Esc`, `dd`, `ciw`, `u`, ...) and `:w`, `:q`, `:q!`, `:wq`, `:x` |
+| `F2` Front, `F3` Back | `hjkl` scroll, `v` choose the label columns to show, `f` fit labels to the width, `c` compact rows |
+| `F4` Pins | `j`/`k` select a pin, `h`/`l` scroll the label columns |
+| `F5` Notes | `j`/`k` scroll |
+
+`Tab` and `Shift-Tab` switch tabs, `Ctrl-s` saves and `q` quits, asking once
+more when there are unsaved changes.
+
+## 🔧 Command Line
 
 ```bash
 cargo run --example pinout -- <input> [options]
 ```
 
-The input is a `.yaml`, `.yml` or `.json` board description, or a legacy `.csv` file which is converted on the fly. The output format follows the extension of `-o`, and defaults to the terminal.
+The input is a `.yaml`, `.yml` or `.json` board description, or a legacy `.csv`
+file that is converted on the fly. The output format follows the extension of
+`-o` and defaults to the terminal.
+
+<details>
+<summary><b>All options</b></summary>
 
 | Option | Description |
 | --- | --- |
 | `-f, --format <term\|svg\|json\|yaml>` | Output format, overrides the `-o` extension |
 | `-o, --output <file>` | Write to a file instead of stdout |
-| `-i, --tui` | Open the interactive editor and viewer |
+| `-i, --tui` | Open the interactive editor |
 | `-b, --back` | Render the back of the board |
 | `-t, --types <types>` | Terminal: only show labels of these types, e.g. `gpio,power,gnd` |
-| `-n, --notes` | Terminal: print the board's notes (feature lists, warnings) |
+| `-n, --notes` | Terminal: print the board's notes |
 | `-c, --compact` | Terminal: no gap between pins |
-| `-w, --width <n>` | Terminal: maximum width (defaults to the terminal width); long labels are shortened from the middle until the diagram fits |
+| `-w, --width <n>` | Terminal: maximum width, the terminal width by default; long labels are shortened from the middle until the diagram fits |
 | `-m, --max-label <n>` | Terminal: shorten labels longer than `n` characters, e.g. `GPIO36` to `GP…36` |
-| `-p, --packed` | Terminal: flow labels next to each other instead of aligning the n-th label of every pin in one column |
+| `-p, --packed` | Terminal: flow labels next to each other instead of aligning them in columns |
 | `--no-color` | Terminal: plain text; `NO_COLOR` and `CLICOLOR_FORCE` are honored too |
 
-### Interactive Editor
+</details>
 
-`--tui` (or `-i`) opens the description in a terminal user interface built with [ratatui](https://ratatui.rs) and [edtui](https://github.com/preiter93/edtui):
-
-```bash
-cargo run --example pinout -- ATtiny85.yaml --tui
-```
-
-| Tab | Content |
-| --- | --- |
-| `F1` Editor | The YAML or JSON with syntax highlighting and vim keys (`i`, `Esc`, `dd`, `ciw`, `u`, ...) |
-| `F2` Front, `F3` Back | The diagram, redrawn on every edit. `hjkl`/arrows scroll, `f` fits labels to the width, `c` toggles compact rows, `v` opens a chooser for the label columns to show |
-| `F4` Pins | Every pin with its labels and types |
-| `F5` Notes | The notes of the board |
-
-`Tab`/`Shift-Tab` switch tabs (in the editor while in normal mode), `Ctrl-s` saves and `Ctrl-q` or `q` quits, asking once more when there are unsaved changes. The editor also takes the vim commands `:w`, `:q`, `:q!`, `:wq` and `:x`. While the text does not parse, the tabs keep the last valid version and the status line shows the error.
-
-Convert a legacy CSV description to YAML:
-
-```bash
-cargo run --example pinout -- ESP32-MAXIO.csv -o ESP32-MAXIO.yaml
-```
-
-### As a Library
+## 📚 Library
 
 ```rust
 use pinout::model::Pinout;
@@ -133,17 +142,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-## YAML Format
+## 📝 YAML Format
 
-The format is the one of [pinoutleaf](https://github.com/splitbrain/pinoutleaf#configuration-syntax); JSON files use the same structure.
+The format is the one of [pinoutleaf](https://github.com/splitbrain/pinoutleaf#configuration-syntax);
+JSON files use the same structure.
 
-- `title`: Title of the diagram
-- `width`, `height`: Board size in pins on the 0.1" raster. When left out, they follow the longest rows
-- `pins`: Up to four rows, `left`, `right`, `top` and `bottom`. Each pin is a list of `label:type` strings ordered from the pin outwards; an empty entry leaves a position unused. An empty string (`""`) keeps a label column free, so the following labels stay aligned in the terminal. A suffix that is not a known type stays part of the label, so `ADC1:0` needs no escaping
-- `types`: Custom types with `label` (legend text), `bgcolor` and `fgcolor`. The built-in types `gpio`, `power`, `gnd`, `i2c`, `uart`, `spi` and `analog` can be used directly or restyled; labels without a type use `default`
-- `image`: Board photos for the `front` and `back` (`src` plus optional `top`, `left`, `right`, `bottom` offsets in 1/100 mm, `opacity` and `grayscale`)
-- `offsets`: Move a row of pins inwards by a number of pins
-- `notes`: Free text blocks with an optional `title` and a list of `lines`, printed in the terminal with `--notes`. This is an extension; pinoutleaf ignores it
+- `title`: title of the diagram
+- `width`, `height`: board size in pins on the 0.1" raster; when left out they follow the longest rows
+- `pins`: up to four rows, `left`, `right`, `top` and `bottom`. Each pin is a list of `label:type` strings from the pin outwards, and an empty entry leaves a position unused. An empty string (`""`) keeps a label column free so the labels after it stay aligned. A suffix that is not a known type stays part of the label, so `ADC1:0` needs no escaping
+- `types`: custom types with `label` (legend text), `bgcolor` and `fgcolor`. The built-in `gpio`, `power`, `gnd`, `i2c`, `uart`, `spi` and `analog` can be used directly or restyled; labels without a type use `default`
+- `image`: board photos for the `front` and `back`: `src` plus optional `top`, `left`, `right` and `bottom` offsets in 1/100 mm, `opacity` and `grayscale`
+- `offsets`: move a row of pins inwards by a number of pins
+- `notes`: text blocks with an optional `title` and a list of `lines`, shown in the Notes tab and with `--notes`. This is an extension that pinoutleaf ignores
 
 ```yaml
 types:
@@ -159,30 +169,40 @@ notes:
       - "Bluetooth 5 LE"
 ```
 
-## Legacy CSV Format
+## 🧩 Examples
 
-The CSV format below predates the YAML format. `cargo run --example main input.csv output.svg` still renders it with the original SVG renderer, and the `pinout` tool converts it to the YAML model: the main left and right pin sets become the board, label types are guessed from their names (`GPIO21` is GPIO, `ADC1:0` analog, `HSPI:CLK` SPI, ...), messages become notes, and everything else is reported as a warning.
+- [`ATtiny85.yaml`](ATtiny85.yaml): the ATtiny85 in its DIP-8 package, after the pin configuration and Port B alternate functions of the ATtiny25/45/85 datasheet. Functions of one kind share a column, and notes describe the chip
+- [`ESP32-MAXIO.yaml`](ESP32-MAXIO.yaml): a large ESP32 and SAML21 board, converted from the legacy [`ESP32-MAXIO.csv`](ESP32-MAXIO.csv)
 
+## 🗄️ Legacy CSV Format
 
-The CSV format uses a two-phase approach for defining pinout diagrams:
+Before the YAML format, diagrams were described in CSV files that place pin
+sets freely on a page. `cargo run --example main input.csv output.svg` still
+renders them with the original SVG renderer, and the `pinout` tool converts them
+to YAML:
 
-### 1. Setup Phase
-Defines themes, styling, and configuration that applies to the entire diagram.
+```bash
+cargo run --example pinout -- ESP32-MAXIO.csv -o ESP32-MAXIO.yaml
+```
 
-### 2. Draw Phase
-Contains the actual drawing commands. Triggered by the `DRAW` command.
+The conversion takes the main left and right pin sets as the board, guesses
+label types from their names (`GPIO21` is GPIO, `ADC1:0` analog, `HSPI:CLK`
+SPI, ...), keeps messages as notes and reports everything else as a warning.
 
-### Basic Structure
+<details>
+<summary><b>CSV structure and commands</b></summary>
+
+A file has a setup phase that defines themes and styles, and a draw phase,
+started by `DRAW`, that places the elements:
 
 ```csv
-# Setup Phase - Define themes and styles
+# Setup phase
 LABELS,DEFAULT,TYPE,GROUP,Pin Name,Function 1,Function 2
 BORDER COLOR,black
 FILL COLOR,white,white,white,lightblue,yellow
 FONT,Arial
 FONT SIZE,12
 
-# Define pin types and groups
 TYPE,IO,blue,1
 TYPE,Input,green,1
 TYPE,Output,red,1
@@ -190,139 +210,52 @@ GROUP,IO,lightblue,0.5
 GROUP,Input,lightgreen,0.5
 GROUP,Output,lightyellow,0.5
 
-# Draw Phase - Start rendering
+# Draw phase
 DRAW
 ANCHOR,50,100
 PINSET,LEFT,PACKED,CENTER,CENTER,20,80,100,10,5,2
 PIN,1,VDD,Output,,3.3V Power
 PIN,2,GND,Output,,Ground
-# ... more pins
 ```
 
-## Command Reference
+Setup phase commands:
 
-### Setup Phase Commands
+- `LABELS`: the label columns of the pins
+- `BORDER COLOR`, `BORDER WIDTH`, `BORDER OPACITY`: borders of the label boxes
+- `FILL COLOR`, `OPACITY`: fill of the label boxes, per column
+- `FONT`, `FONT SIZE`, `FONT COLOR`, `FONT SLANT`, `FONT BOLD`, `FONT STRETCH`, `FONT OUTLINE`, `FONT OUTLINE THICKNESS`: text style, per column
+- `TYPE`, `WIRE`, `GROUP`: pin types, wire types and pin groups with their colors
+- `BOX`, `TEXT FONT`: named box and text themes
+- `PAGE`, `DPI`: page size (`A3-L`, `A4-P`, ...) and resolution
 
-#### Theme Definition
-- `LABELS` - Define pin labels and column structure
-- `BORDER COLOR` - Set border colors for different pin types
-- `FILL COLOR` - Set fill colors for pin boxes
-- `FONT` - Define font families
-- `FONT SIZE` - Set font sizes
-- `FONT COLOR` - Set text colors
-- `OPACITY` - Set transparency levels
+Draw phase commands:
 
-#### Styling Commands
-- `BORDER WIDTH` - Border line thickness
-- `BORDER OPACITY` - Border transparency
-- `TYPE` - Define pin types (IO, Input, Output)
-- `WIRE` - Define wire types and colors
-- `GROUP` - Define pin groups with custom styling
-- `BOX` - Define box themes and dimensions
+- `ANCHOR`: origin of the next pin set
+- `PINSET`: starts a pin set with its side and layout
+- `PIN`, `PINTEXT`: a pin with its labels, or with a label and free text
+- `IMAGE`, `ICON`: raster images and SVG icons
+- `BOX`: a styled box
+- `MESSAGE`, `TEXT`, `END MESSAGE`: blocks of text
+- `GOOGLEFONT`: web fonts to load
 
-#### Page Setup
-- `PAGE` - Set page size ("A3-L", "A4-P", etc.)
-- `DPI` - Set resolution for rendering
+</details>
 
-### Draw Phase Commands
+## 🙏 Acknowledgments
 
-#### Layout Commands
-- `ANCHOR` - Set drawing origin point
-- `PINSET` - Start a new set of pins with layout parameters
-- `PIN` - Add individual pins with labels and properties
-- `PINTEXT` - Add text labels to pins
+- The board description format and SVG layout come from [pinoutleaf](https://github.com/splitbrain/pinoutleaf) by Andreas Gohr
+- The CSV format follows [GenPinoutSVG](https://github.com/stevenj/GenPinoutSVG)
+- The interactive editor is built on [ratatui](https://ratatui.rs) and [edtui](https://github.com/preiter93/edtui)
 
-#### Visual Elements
-- `IMAGE` - Embed raster images
-- `ICON` - Add SVG icons
-- `BOX` - Draw styled boxes
-- `MESSAGE` - Add text messages
-- `TEXT` - Add styled text elements
+## 📝 License
 
-## Examples
+Licensed under MIT License ([LICENSE](LICENSE)).
 
-The repository includes example CSV files demonstrating different features:
+### 🚧 Contributions
 
-### ATtiny85
-`ATtiny85.yaml` describes the ATtiny85 in its DIP-8 package, following the pin configuration and Port B alternate functions of the ATtiny25/45/85 datasheet. It keeps functions of the same kind in one column with blank labels and carries notes about the chip:
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in this project by you, as defined in the MIT license, shall be
+licensed as above, without any additional terms or conditions.
 
-```bash
-cargo run --example pinout -- ATtiny85.yaml --notes
-```
-
-### ESP32 Development Board
-`ESP32-MAXIO.yaml` is the YAML conversion of `ESP32-MAXIO.csv`. The CSV file is a complete example of the legacy format showing:
-- Complex pin labeling with multiple functions per pin
-- Custom color schemes for different pin types and groups
-- Image embedding for board visualization
-- Professional styling and layout
-- Advanced features like wire types and pin grouping
-
-### Pin Types and Groups
-
-```csv
-# Define pin types with colors
-TYPE,IO,black,1
-TYPE,Input,blue,1  
-TYPE,Output,red,1
-
-# Define groups with custom styling
-GROUP,Power,black,0
-GROUP,Analog,green,0.5
-
-# Use in pin definitions
-PIN,1,VCC,Output,Power,3.3V Supply
-PIN,2,A0,Input,Analog,Analog Input 0
-```
-
-## API Documentation
-
-### Core Types
-
-- `Command` - Enumeration of all supported CSV commands
-- `Phase` - Setup or Draw phase indicator  
-- `PinType` - IO, Input, Output pin classifications
-- `WireType` - Digital, PWM, Analog wire types
-- `Side` - Left, Right, Top, Bottom positioning
-
-### Parser Module
-
-- `parse_csv_file(path)` - Parse CSV file into command list
-- `Document` - Higher-level document representation with validation
-
-### Renderer Module
-
-- `generate_svg(commands, output_path)` - Render commands to SVG file
-- `SvgRenderer` - Low-level SVG rendering engine with theming support
-
-## Error Handling
-
-The library provides comprehensive error handling:
-
-- `ParserError` - CSV parsing and validation errors
-- `RenderError` - SVG generation and file I/O errors
-- Phase validation - Ensures commands are used in correct phase
-- Resource validation - Checks for missing images and fonts
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Add tests for new functionality
-5. Run tests (`cargo test`)
-6. Commit changes (`git commit -m 'Add amazing feature'`)
-7. Push to branch (`git push origin feature/amazing-feature`)
-8. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License.
-
-## Acknowledgments
-
-- Built with Rust for performance and safety
-- Board description format and SVG layout from [pinoutleaf](https://github.com/splitbrain/pinoutleaf) by Andreas Gohr
-- Uses the `svg` crate for vector graphics generation
-- CSV parsing powered by the `csv` crate
-- Image processing via the `image` crate
+The images in this README are drawn by
+[`scripts/readme_images.py`](scripts/readme_images.py); its header explains how
+to regenerate them.

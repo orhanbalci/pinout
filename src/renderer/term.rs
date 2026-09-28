@@ -27,6 +27,14 @@ pub struct TermOptions {
     /// Shorten labels longer than this. Labels are also shortened as far as
     /// needed to fit `max_width`, down to a few characters.
     pub max_label: Option<usize>,
+    /// Draw the color legend beside the board. Turn it off to show the
+    /// legend elsewhere, see [`legend_entries`].
+    pub legend: bool,
+    /// Surround the diagram with a titled border. Turn it off when the
+    /// caller draws its own border.
+    pub frame: bool,
+    /// Label columns to leave out, counted from the pin outwards from 0.
+    pub hidden_columns: Vec<usize>,
 }
 
 impl Default for TermOptions {
@@ -40,6 +48,9 @@ impl Default for TermOptions {
             notes: false,
             packed: false,
             max_label: None,
+            legend: true,
+            frame: true,
+            hidden_columns: Vec::new(),
         }
     }
 }
@@ -174,8 +185,82 @@ fn width(lines: &[Line]) -> usize {
     lines.iter().map(|l| l.width).max().unwrap_or(0)
 }
 
+/// A run of text in one style, for drawing the diagram with another terminal
+/// library such as ratatui.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StyledSpan {
+    pub text: String,
+    pub fg: Option<(u8, u8, u8)>,
+    pub bg: Option<(u8, u8, u8)>,
+    pub bold: bool,
+}
+
+impl From<&Span> for StyledSpan {
+    fn from(span: &Span) -> Self {
+        let rgb = |c: Option<Rgb>| c.map(|Rgb(r, g, b)| (r, g, b));
+        Self {
+            text: span.text.clone(),
+            fg: rgb(span.style.fg),
+            bg: rgb(span.style.bg),
+            bold: span.style.bold,
+        }
+    }
+}
+
 /// Render the front (or back) of a board as terminal text.
 pub fn render_terminal(pinout: &Pinout, options: &TermOptions) -> Result<String, PinoutError> {
+    let mut out = String::new();
+    for line in diagram(pinout, options)? {
+        line.write(&mut out, options.color);
+    }
+    Ok(out)
+}
+
+/// Render the front (or back) of a board as styled lines instead of ANSI
+/// text. `color` is ignored.
+pub fn render_lines(
+    pinout: &Pinout,
+    options: &TermOptions,
+) -> Result<Vec<Vec<StyledSpan>>, PinoutError> {
+    Ok(diagram(pinout, options)?
+        .iter()
+        .map(|line| line.spans.iter().map(StyledSpan::from).collect())
+        .collect())
+}
+
+/// The legend of the diagram: a color swatch and the text of every type
+/// shown, sorted by text.
+pub fn legend_entries(pinout: &Pinout, options: &TermOptions) -> Vec<(StyledSpan, String)> {
+    let cells = Cells {
+        pinout,
+        types: options.types.as_deref(),
+        hidden_columns: &options.hidden_columns,
+        max_label: None,
+    };
+    cells
+        .used_types()
+        .iter()
+        .map(|kind| {
+            let swatch = Span {
+                text: "  ".to_string(),
+                style: Style::chip(kind),
+            };
+            (StyledSpan::from(&swatch), kind.label.clone())
+        })
+        .collect()
+}
+
+/// The chip a label is drawn as, text padded with a space on either side.
+pub fn label_chip(pinout: &Pinout, label: &Label) -> StyledSpan {
+    let chip = Chip {
+        text: label.text.clone(),
+        style: Style::chip(&pinout.resolve_type(label.kind.as_deref())),
+    };
+    let line = chip.line(0);
+    StyledSpan::from(&line.spans[0])
+}
+
+fn diagram(pinout: &Pinout, options: &TermOptions) -> Result<Vec<Line>, PinoutError> {
     if let Some(filter) = &options.types {
         for wanted in filter {
             if !is_builtin_type(wanted) && !pinout.types.contains_key(wanted) {
@@ -196,12 +281,13 @@ pub fn render_terminal(pinout: &Pinout, options: &TermOptions) -> Result<String,
     let mut cells = Cells {
         pinout: &pinout,
         types: options.types.as_deref(),
+        hidden_columns: &options.hidden_columns,
         max_label: options.max_label,
     };
 
     // Frame borders and padding take this many columns around the content
-    const FRAME_WIDTH: usize = 6;
-    let content_width = options.max_width.map(|w| w.saturating_sub(FRAME_WIDTH));
+    let frame_width = if options.frame { 6 } else { 0 };
+    let content_width = options.max_width.map(|w| w.saturating_sub(frame_width));
     let used = cells.used_types();
     let mut content = layout(&cells, &used, options);
 
@@ -221,27 +307,28 @@ pub fn render_terminal(pinout: &Pinout, options: &TermOptions) -> Result<String,
     } else {
         pinout.title.clone()
     };
-    let mut out = String::new();
     let title = Some(title.as_str()).filter(|t| !t.is_empty());
-    for line in frame(title, content) {
-        line.write(&mut out, options.color);
-    }
+    let mut lines = if options.frame {
+        frame(title, content)
+    } else {
+        content
+    };
     if options.notes {
         for note in &pinout.notes {
-            out.push('\n');
+            lines.push(Line::default());
             if let Some(title) = &note.title {
                 let mut line = Line::default();
                 line.push(title.clone(), Style::bold());
-                line.write(&mut out, options.color);
+                lines.push(line);
             }
             for text in &note.lines {
                 let mut line = Line::default();
                 line.push(text.clone(), Style::default());
-                line.write(&mut out, options.color);
+                lines.push(line);
             }
         }
     }
-    Ok(out)
+    Ok(lines)
 }
 
 /// Labels are never shortened below this many characters.
@@ -262,7 +349,11 @@ fn layout(cells: &Cells, used: &[ResolvedType], options: &TermOptions) -> Vec<Li
         options.compact,
     );
 
-    beside(board, legend_box(used), 4)
+    if options.legend {
+        beside(board, legend_box(used), 4)
+    } else {
+        board
+    }
 }
 
 /// Turns labels into colored chips, applying the type filter and the label
@@ -270,13 +361,15 @@ fn layout(cells: &Cells, used: &[ResolvedType], options: &TermOptions) -> Vec<Li
 struct Cells<'a> {
     pinout: &'a Pinout,
     types: Option<&'a [String]>,
+    hidden_columns: &'a [usize],
     max_label: Option<usize>,
 }
 
 impl Cells<'_> {
-    /// The type of a label that is shown, or `None` for hidden and blank ones.
-    fn visible(&self, label: &Label) -> Option<ResolvedType> {
-        if label.text.is_empty() {
+    /// The type of the label in `column` of a pin, or `None` when it is
+    /// hidden or blank.
+    fn visible(&self, label: &Label, column: usize) -> Option<ResolvedType> {
+        if label.text.is_empty() || self.hidden_columns.contains(&column) {
             return None;
         }
         let kind = self.pinout.resolve_type(label.kind.as_deref());
@@ -285,8 +378,8 @@ impl Cells<'_> {
             .then_some(kind)
     }
 
-    fn chip(&self, label: &Label) -> Option<Chip> {
-        let kind = self.visible(label)?;
+    fn chip(&self, label: &Label, column: usize) -> Option<Chip> {
+        let kind = self.visible(label, column)?;
         Some(Chip {
             text: shorten(&label.text, self.max_label),
             style: Style::chip(&kind),
@@ -295,14 +388,21 @@ impl Cells<'_> {
 
     /// Chips of a pin in order, `None` where a label is hidden or blank.
     fn pin(&self, pin: &[Label]) -> Vec<Option<Chip>> {
-        pin.iter().map(|label| self.chip(label)).collect()
+        pin.iter()
+            .enumerate()
+            .map(|(column, label)| self.chip(label, column))
+            .collect()
     }
 
     fn used_types(&self) -> Vec<ResolvedType> {
         let mut used: Vec<ResolvedType> = Vec::new();
         for edge in Edge::ALL {
-            for label in self.pinout.row(edge).iter().flatten() {
-                if let Some(kind) = self.visible(label) {
+            for pin in self.pinout.row(edge) {
+                for kind in pin
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(n, l)| self.visible(l, n))
+                {
                     if !used.iter().any(|u| u.name == kind.name) {
                         used.push(kind);
                     }
@@ -317,9 +417,9 @@ impl Cells<'_> {
         Edge::ALL
             .iter()
             .flat_map(|edge| self.pinout.row(*edge))
-            .flatten()
-            .filter(|label| self.visible(label).is_some())
-            .map(|label| label.text.chars().count())
+            .flat_map(|pin| pin.into_iter().enumerate())
+            .filter(|(n, label)| self.visible(label, *n).is_some())
+            .map(|(_, label)| label.text.chars().count())
             .max()
             .unwrap_or(0)
     }
@@ -951,6 +1051,24 @@ pins:
         assert!(width_of(&narrow) <= wide - 4, "\n{narrow}");
         assert!(narrow.contains(" UA…TX "), "\n{narrow}");
         assert!(narrow.contains("│    GPIO   │"), "\n{narrow}");
+    }
+
+    #[test]
+    fn hides_columns_and_their_types() {
+        let options = TermOptions {
+            color: false,
+            hidden_columns: vec![1],
+            ..TermOptions::default()
+        };
+        let out = render_terminal(&pinout(), &options).unwrap();
+        assert!(!out.contains("MISO"), "\n{out}");
+        assert!(!out.contains("SPI"), "\n{out}");
+        assert!(out.contains("GPIO5") && out.contains("SWDIO"), "\n{out}");
+        let legend: Vec<String> = legend_entries(&pinout(), &options)
+            .into_iter()
+            .map(|(_, label)| label)
+            .collect();
+        assert_eq!(legend, ["GPIO", "Ground", "Power"]);
     }
 
     #[test]

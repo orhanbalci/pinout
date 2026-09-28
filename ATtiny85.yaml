@@ -1,0 +1,55 @@
+title: "ATtiny85 (DIP-8)"
+
+# PDIP-8 seen from the top: pins 1-4 run down the left side, pins 8-5 down
+# the right side. The rows are 0.3" apart, so the board is 4 pins wide.
+width: 4
+height: 4
+
+# Every pin lists its functions in the same column order, with "" keeping a
+# column free: pin number, port, analog, SPI, USI, I2C, timer outputs,
+# clock/reset, interrupts. An overline in the datasheet is written as "/".
+pins:
+  left:
+    - [ "1", "PB5:gpio", "ADC0:analog", "", "", "", "", "", "RESET dW:control", "PCINT5:interrupt" ]
+    - [ "2", "PB3:gpio", "ADC3:analog", "", "", "", "/OC1B:timer", "", "XTAL1 CLKI:clock", "PCINT3:interrupt" ]
+    - [ "3", "PB4:gpio", "ADC2:analog", "", "", "", "OC1B:timer", "", "XTAL2 CLKO:clock", "PCINT4:interrupt" ]
+    - [ "4", "GND:gnd" ]
+  right:
+    - [ "8", "VCC:power" ]
+    - [ "7", "PB2:gpio", "ADC1:analog", "SCK:spi", "USCK:usi", "SCL:i2c", "T0:timer", "", "", "INT0 PCINT2:interrupt" ]
+    - [ "6", "PB1:gpio", "AIN1:analog", "MISO:spi", "DO:usi", "", "OC0B:timer", "OC1A:timer", "", "PCINT1:interrupt" ]
+    - [ "5", "PB0:gpio", "AIN0:analog", "MOSI:spi", "DI:usi", "SDA:i2c", "OC0A:timer", "/OC1A:timer", "AREF:analog", "PCINT0:interrupt" ]
+
+types:
+  usi:
+    label: "USI"
+    bgcolor: "#00897b"
+    fgcolor: "#ffffff"
+  timer:
+    label: "Timer / PWM"
+    bgcolor: "#fdd835"
+    fgcolor: "#000000"
+  clock:
+    label: "Clock"
+    bgcolor: "#c0ca33"
+    fgcolor: "#000000"
+  control:
+    label: "Reset / debugWIRE"
+    bgcolor: "#ffb300"
+    fgcolor: "#000000"
+  interrupt:
+    label: "Interrupt"
+    bgcolor: "#00acc1"
+    fgcolor: "#ffffff"
+
+notes:
+  - title: "ATtiny85"
+    lines:
+      - "8-bit AVR, up to 20 MHz, 8 KB flash, 512 B SRAM, 512 B EEPROM"
+      - "Supply: 2.7 - 5.5 V (ATtiny85V: 1.8 - 5.5 V)"
+      - "Source: Atmel ATtiny25/45/85 datasheet, pin configuration and Port B alternate functions"
+  - title: "Notes"
+    lines:
+      - "SPI and I2C are provided by the USI; there is no dedicated TWI or UART"
+      - "Using PB5 as I/O requires the RSTDISBL fuse, which disables ISP programming"
+      - "AIN0/AIN1 are the analog comparator inputs, AREF the external ADC reference"

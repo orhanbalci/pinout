@@ -82,6 +82,7 @@ The input is a `.yaml`, `.yml` or `.json` board description, or a legacy `.csv` 
 | --- | --- |
 | `-f, --format <term\|svg\|json\|yaml>` | Output format, overrides the `-o` extension |
 | `-o, --output <file>` | Write to a file instead of stdout |
+| `-i, --tui` | Open the interactive editor and viewer |
 | `-b, --back` | Render the back of the board |
 | `-t, --types <types>` | Terminal: only show labels of these types, e.g. `gpio,power,gnd` |
 | `-n, --notes` | Terminal: print the board's notes (feature lists, warnings) |
@@ -90,6 +91,23 @@ The input is a `.yaml`, `.yml` or `.json` board description, or a legacy `.csv` 
 | `-m, --max-label <n>` | Terminal: shorten labels longer than `n` characters, e.g. `GPIO36` to `GP…36` |
 | `-p, --packed` | Terminal: flow labels next to each other instead of aligning the n-th label of every pin in one column |
 | `--no-color` | Terminal: plain text; `NO_COLOR` and `CLICOLOR_FORCE` are honored too |
+
+### Interactive Editor
+
+`--tui` (or `-i`) opens the description in a terminal user interface built with [ratatui](https://ratatui.rs) and [edtui](https://github.com/preiter93/edtui):
+
+```bash
+cargo run --example pinout -- ATtiny85.yaml --tui
+```
+
+| Tab | Content |
+| --- | --- |
+| `F1` Editor | The YAML or JSON with syntax highlighting and vim keys (`i`, `Esc`, `dd`, `ciw`, `u`, ...) |
+| `F2` Front, `F3` Back | The diagram, redrawn on every edit. `hjkl`/arrows scroll, `f` fits labels to the width, `c` toggles compact rows, `v` opens a chooser for the label columns to show |
+| `F4` Pins | Every pin with its labels and types |
+| `F5` Notes | The notes of the board |
+
+`Tab`/`Shift-Tab` switch tabs (in the editor while in normal mode), `Ctrl-s` saves and `Ctrl-q` or `q` quits, asking once more when there are unsaved changes. The editor also takes the vim commands `:w`, `:q`, `:q!`, `:wq` and `:x`. While the text does not parse, the tabs keep the last valid version and the status line shows the error.
 
 Convert a legacy CSV description to YAML:
 

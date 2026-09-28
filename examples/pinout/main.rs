@@ -6,6 +6,8 @@ use pinout::renderer::term::{render_terminal, TermOptions};
 use std::io::IsTerminal;
 use std::path::Path;
 
+mod tui;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let matches = Command::new("pinout")
         .version("1.0")
@@ -28,6 +30,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .help("Output file (default: stdout)")
                 .long("output")
                 .short('o'),
+        )
+        .arg(
+            Arg::new("tui")
+                .help("Open an interactive view with an editor for the description")
+                .long("tui")
+                .short('i')
+                .action(ArgAction::SetTrue),
         )
         .arg(
             Arg::new("back")
@@ -88,6 +97,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let input = Path::new(matches.get_one::<String>("input").unwrap());
     let output = matches.get_one::<String>("output").map(Path::new);
 
+    if matches.get_flag("tui") {
+        return tui::run(input);
+    }
+
     let pinout = if extension(input) == "csv" {
         let import = from_csv_file(input)?;
         for warning in &import.warnings {
@@ -140,6 +153,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     notes: matches.get_flag("notes"),
                     packed: matches.get_flag("packed"),
                     max_label: matches.get_one::<usize>("max_label").copied(),
+                    ..TermOptions::default()
                 },
             )?
         }
